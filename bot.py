@@ -17,6 +17,7 @@ KATALOG_LINKS = {
     "Rom bezaklari": "https://muzaffar57.github.io/-penodecor-katalog/katalog.html",
     "Termopanellar": "https://muzaffar57.github.io/-penodecor-katalog/termopanel.html",
     "Barelef gullar": "https://muzaffar57.github.io/-penodecor-katalog/barelef.html",
+    "Belbog' karnizlar": "https://muzaffar57.github.io/-penodecor-katalog/belbog.html",
 }
 
 KATALOG_COUNTS = {
@@ -27,6 +28,7 @@ KATALOG_COUNTS = {
     "Rom bezaklari": 16,
     "Termopanellar": 16,
     "Barelef gullar": 16,
+    "Belbog' karnizlar": 27,
 }
 
 CHOOSING, MODEL_SELECTION, QOPLAMA, RAZMER, LOYIHA_PHOTO, CUSTOM_PHOTO = range(6)
@@ -41,7 +43,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [KeyboardButton("Karnizlar"), KeyboardButton("Shohona karnizlar")],
         [KeyboardButton("Rom bezaklari"), KeyboardButton("Termopanellar")],
         [KeyboardButton("Barelef gullar"), KeyboardButton("📐 Loyiha bo'yicha hisoblash")],
-        [KeyboardButton("📋 Mening buyurtmalarim")],
+        [KeyboardButton("📋 Mening buyurtmalarim")], [KeyboardButton("Belbog' karnizlar"), KeyboardButton("Yumaloq ustunlar")],
     ]
     markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text(
