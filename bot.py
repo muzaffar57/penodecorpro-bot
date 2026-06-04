@@ -21,7 +21,7 @@ KATALOG_LINKS = {
 
 KATALOG_COUNTS = {
     "Kalvak": 16,
-    "Ustunlar": 16,
+    "Ustunlar": 13,
     "Karnizlar": 16,
     "Shohona karnizlar": 16,
     "Rom bezaklari": 16,
