@@ -109,6 +109,7 @@ async def razmer_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def send_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    app.add_handler(MessageHandler(filters.PHOTO & filters.User(ADMIN_ID), get_file_id))
     if update.effective_user.id != ADMIN_ID:
         return
     args = context.args
@@ -143,5 +144,9 @@ def main():
     app.run_polling()
 
 
+async def get_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.photo:
+        file_id = update.message.photo[-1].file_id
+        await update.message.reply_text("File ID: " + file_id)
 if __name__ == "__main__":
     main()
