@@ -43,7 +43,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [KeyboardButton("Karnizlar"), KeyboardButton("Shohona karnizlar")],
         [KeyboardButton("Rom bezaklari"), KeyboardButton("Termopanellar")],
         [KeyboardButton("Barelef gullar"), [KeyboardButton("Belbog' karnizlar"), KeyboardButton("Yumaloq ustunlar")],
-         KeyboardButton("📐 Loyiha bo'yicha hisoblash")],
+        [KeyboardButton("📐 Loyiha bo'yicha hisoblash")],
         [KeyboardButton("📋 Mening buyurtmalarim")],
     ]
     markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
