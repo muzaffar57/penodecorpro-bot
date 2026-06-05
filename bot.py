@@ -368,6 +368,80 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [KeyboardButton("🛒 Savatim"), KeyboardButton("💰 Jami hisob (PDF)")],
     ]
     markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+    # Deep link parametrini tekshirish
+    # Format: /start karniz_MODEL-05
+    if context.args:
+        param = context.args[0]  # masalan: karniz_MODEL-05
+        parts = param.split("_", 1)
+        if len(parts) == 2:
+            bolim_kod = parts[0]
+            model = parts[1].replace("-", "-")
+
+            bolim_map = {
+                "karniz": "Karnizlar",
+                "belbog": "Belbog' karnizlar",
+                "rom": "Rom bezaklari",
+                "ustun": "Ustunlar",
+                "yumaloq": "Yumaloq ustunlar",
+                "kapitel": "Kapitel va baza",
+                "kalvak": "Kalvak",
+                "shohona": "Shohona karnizlar",
+                "barelef": "Barelef gullar",
+                "ramka": "Devorga ramkalar",
+            }
+
+            category = bolim_map.get(bolim_kod)
+            if category and model.startswith("MODEL"):
+                context.user_data["category"] = category
+                context.user_data["model"] = model
+
+                await update.message.reply_text(
+                    "Assalomu alaykum, " + user.first_name + "!\n\n"
+                    "Katalogdan tanladingiz:\n"
+                    "📦 " + category + " — " + model,
+                    reply_markup=markup
+                )
+
+                # Qoplama so'rash
+                kb = [
+                    [InlineKeyboardButton("✅ Ha, qoplama bilan", callback_data="qoplama_ha")],
+                    [InlineKeyboardButton("❌ Yo'q, qoplama siz", callback_data="qoplama_yoq")],
+                ]
+
+                if category == "Rom bezaklari":
+                    kb2 = [
+                        [InlineKeyboardButton("Katta razmer", callback_data="razmer_Katta_razmer")],
+                        [InlineKeyboardButton("Kichik razmer", callback_data="razmer_Kichik_razmer")],
+                    ]
+                    await update.message.reply_text(
+                        model + " — Razmer tanlang:",
+                        reply_markup=InlineKeyboardMarkup(kb2)
+                    )
+                    return RAZMER_TANLOV
+                elif category in ["Karnizlar", "Belbog' karnizlar"]:
+                    kb2 = [[InlineKeyboardButton(r, callback_data="razmer_" + r.replace(" ", "_"))] for r in KARNIZ_RAZMERLAR]
+                    await update.message.reply_text(
+                        model + " — Razmer tanlang:",
+                        reply_markup=InlineKeyboardMarkup(kb2)
+                    )
+                    return RAZMER_TANLOV
+                elif category == "Ustunlar":
+                    kb2 = [[InlineKeyboardButton(r, callback_data="razmer_" + r)] for r in USTUN_RAZMERLAR]
+                    await update.message.reply_text(
+                        model + " — Razmer tanlang:",
+                        reply_markup=InlineKeyboardMarkup(kb2)
+                    )
+                    return RAZMER_TANLOV
+                else:
+                    await update.message.reply_text(
+                        model + " tanlandi!\n\nQoplama tortilsinmi?\n\n"
+                        "ℹ️ Narxlar qoplama bilan hisoblangan.\n"
+                        "Qoplama shart bo'lmasa — narx 2 barobar arzon!",
+                        reply_markup=InlineKeyboardMarkup(kb)
+                    )
+                    return QOPLAMA
+
     await update.message.reply_text(
         "Assalomu alaykum, " + user.first_name + "!\n\nPenoDecorPro botiga xush kelibsiz!\nQuyidagi bo'limlardan birini tanlang:",
         reply_markup=markup
