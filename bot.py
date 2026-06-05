@@ -654,6 +654,17 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text(model + " tanlandingiz!\n\nRazmer tanlang:", reply_markup=InlineKeyboardMarkup(buttons))
             return RAZMER_TANLOV
 
+        # Qoplama so'ralmaydigan bo'limlar
+        if category in ["Barelef gullar", "Kalvak", "Shohona karnizlar"]:
+            context.user_data["qoplama"] = "Yo'q"
+            await query.message.reply_text(
+                model + " tanlandingiz!\n\n"
+                "ℹ️ Bu mahsulotlar qoplamasiz holatda taqdim etiladi.\n\n"
+                "Necha dona kerak?\nFaqat raqam yozing:\nMasalan: 4\n\n"
+                "📞 Boshqa razmer kerak bo'lsa — bizga aloqaga chiqing!"
+            )
+            return OLCHAM
+
         keyboard = [
             [InlineKeyboardButton("✅ Ha, qoplama bilan", callback_data="qoplama_ha")],
             [InlineKeyboardButton("❌ Yo'q, qoplama siz", callback_data="qoplama_yoq")],
