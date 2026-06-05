@@ -574,20 +574,24 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 mijoz_ism = user.first_name + " " + (user.last_name or "")
                 pdf_bytes = create_pdf_bytes(mijoz_ism, savat[uid])
-                keyboard = [
-                    [InlineKeyboardButton("✅ Buyurtma qilish", callback_data="buyurtma_ber")],
-                    [InlineKeyboardButton("🗑 Savatni tozalash", callback_data="savat_tozala")],
-                ]
                 await context.bot.send_document(
                     chat_id=uid,
                     document=pdf_bytes,
                     filename="PenoDecorPro_hisob.pdf",
-                    caption="PDF hisob-kitob. Korib chiqing va tasdiqlang:",
+                    caption="Sizning buyurtmangiz hisob-kitobi"
+                )
+                keyboard = [
+                    [InlineKeyboardButton("✅ Buyurtma qilish", callback_data="buyurtma_ber")],
+                    [InlineKeyboardButton("🗑 Savatni tozalash", callback_data="savat_tozala")],
+                ]
+                await context.bot.send_message(
+                    chat_id=uid,
+                    text="PDF ni korib chiqing va qaror qiling:",
                     reply_markup=InlineKeyboardMarkup(keyboard)
                 )
             except Exception as e:
                 logger.error("PDF xato: " + str(e))
-                await query.message.reply_text("Xato yuz berdi. Qaytadan urinib ko'ring.")
+                await query.message.reply_text("Xato: " + str(e))
         return CHOOSING
 
     if query.data == "savat_tozala":
