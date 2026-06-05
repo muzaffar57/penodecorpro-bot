@@ -582,9 +582,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     chat_id=uid,
                     document=pdf_bytes,
                     filename="PenoDecorPro_hisob.pdf",
-                    caption="PDF hisob-kitob. Koring va tasdiqlang:",
-
-                    caption="PDF hisob-kitob. Koring va tasdiqlang:",
+                    caption="PDF hisob-kitob. Korib chiqing va tasdiqlang:",
                     reply_markup=InlineKeyboardMarkup(keyboard)
                 )
             except Exception as e:
