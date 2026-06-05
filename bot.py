@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
 
-# Google Sheets ID lari
 SHEET_IDS = {
     "rom": "10AvifJVAE_nWml3U0IEDQU4h2-vsOBZt3MRZII7SYRM",
     "ustun": "18wKIn4C20qkTMfQ5F2V20TJ-VptBK7HCF3dp9-PWGlg",
@@ -27,6 +26,15 @@ def get_gspread_client():
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     return gspread.authorize(creds)
 
+def parse_narx(narx_str):
+    if not narx_str:
+        return None
+    cleaned = narx_str.replace(" ", "").replace(",", "").replace(".", "").replace("\xa0", "")
+    try:
+        return int(cleaned)
+    except:
+        return None
+
 def get_narx(sheet_key, model, razmer, tur=None):
     try:
         client = get_gspread_client()
@@ -35,24 +43,31 @@ def get_narx(sheet_key, model, razmer, tur=None):
         data = ws.get_all_values()
 
         for row in data:
-            if len(row) < 4:
+            if len(row) < 3:
                 continue
             row_model = row[0].strip()
-            row_tur = row[1].strip() if sheet_key == "rom" else ""
-            row_razmer = row[2].strip() if sheet_key == "rom" else row[1].strip()
-            row_narx = row[2].strip() if sheet_key != "rom" else row[3].strip()
+            if not row_model.startswith("MODEL"):
+                continue
 
             if sheet_key == "rom":
+                if len(row) < 4:
+                    continue
+                row_tur = row[1].strip()
+                row_razmer = row[2].strip()
+                row_narx = row[3].strip()
                 if row_model == model and tur and tur in row_tur and razmer in row_razmer:
-                    narx_str = row_narx.replace(" ", "").replace(",", "").replace(".", "")
-                    return int(narx_str) if narx_str.isdigit() else None
+                    return parse_narx(row_narx)
             else:
+                row_razmer = row[1].strip()
+                row_narx = row[2].strip()
                 if row_model == model and razmer in row_razmer:
-                    narx_str = row_narx.replace(" ", "").replace(",", "").replace(".", "")
-                    return int(narx_str) if narx_str.isdigit() else None
+                    return parse_narx(row_narx)
     except Exception as e:
         logger.error("Narx olishda xato: " + str(e))
     return None
+
+def format_narx(narx):
+    return "{:,}".format(narx).replace(",", " ") + " so'm"
 
 KATALOG_LINKS = {
     "Rom bezaklari": "https://muzaffar57.github.io/-penodecor-katalog/katalog.html",
@@ -320,10 +335,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if s.get("razmer"):
                     msg += "   Razmer: " + s["razmer"] + "\n"
                 msg += "   Qoplama: " + s.get("qoplama", "") + "\n"
-                msg += "   O'lcham: " + s.get("olcham", "") + "\n"
-                if s.get("narx"):
-                    msg += "   Narx: " + str(s["narx"]) + " so'm\n"
-                msg += "\n"
+                msg += "   O'lcham: " + s.get("olcham", "") + "\n\n"
 
             if ADMIN_ID:
                 await context.bot.send_message(chat_id=ADMIN_ID, text=msg)
@@ -357,6 +369,25 @@ async def olcham_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     razmer = context.user_data.get("razmer", "")
     rom_tur = context.user_data.get("rom_tur", "")
 
+    narx_xabar = ""
+    sheet_key = None
+
+    if category == "Rom bezaklari":
+        sheet_key = "rom"
+    elif category == "Ustunlar":
+        sheet_key = "ustun"
+    elif category == "Karnizlar":
+        sheet_key = "karniz"
+    elif category == "Belbog' karnizlar":
+        sheet_key = "belbog"
+
+    if sheet_key:
+        narx = get_narx(sheet_key, model, razmer, rom_tur if sheet_key == "rom" else None)
+        if narx:
+            if qoplama == "Yo'q":
+                narx = narx // 2
+            narx_xabar = "\n💰 1 dona/metr narxi: " + format_narx(narx)
+
     item = {
         "category": category,
         "model": model,
@@ -384,6 +415,7 @@ async def olcham_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg += "📏 Razmer: " + razmer + "\n"
     msg += "🖌 Qoplama: " + qoplama + "\n"
     msg += "📐 O'lcham: " + olcham
+    msg += narx_xabar
 
     await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
     return CHOOSING
