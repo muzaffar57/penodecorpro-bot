@@ -340,7 +340,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [KeyboardButton("🏠 Fasad loyihasi tayyorlash")],
         [KeyboardButton("🏗️ Bajarilgan loyihalar")],
         [KeyboardButton("🌟 Keng qamrovlik yechim")],
-        [KeyboardButton("🛒 Savatim"), KeyboardButton("📋 Buyurtmalarim")],
+        [KeyboardButton("🛒 Savatim"), KeyboardButton("💰 Jami hisob (PDF)")],
     ]
     markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text(
@@ -354,6 +354,28 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user = update.effective_user
     uid = user.id
+
+    if text == "💰 Jami hisob (PDF)":
+        if uid in savat and savat[uid]:
+            try:
+                mijoz_ism = user.first_name + " " + (user.last_name or "")
+                pdf_bytes = create_pdf_bytes(mijoz_ism, savat[uid])
+                keyboard = [
+                    [InlineKeyboardButton("✅ Buyurtma qilish", callback_data="buyurtma_ber")],
+                    [InlineKeyboardButton("🗑 Savatni tozalash", callback_data="savat_tozala")],
+                ]
+                await update.message.reply_document(
+                    document=pdf_bytes,
+                    filename="PenoDecorPro_hisob.pdf",
+                    caption="Sizning buyurtmangiz hisob-kitobi. Ko'rib chiqing:",
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
+            except Exception as e:
+                logger.error("PDF xato: " + str(e))
+                await update.message.reply_text("Xato yuz berdi: " + str(e))
+        else:
+            await update.message.reply_text("Savat bo'sh. Avval mahsulot tanlang!")
+        return CHOOSING
 
     if text == "📋 Buyurtmalarim":
         if uid in orders and orders[uid]:
@@ -594,6 +616,36 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         return MODEL_SELECTION
 
+    if query.data == "savatim_kor":
+        if uid in savat and savat[uid]:
+            for i, s in enumerate(savat[uid]):
+                mahsulot = s["category"] + " — " + s.get("model", "")
+                if s.get("rom_tur"):
+                    mahsulot += " | " + s["rom_tur"]
+                if s.get("razmer"):
+                    mahsulot += " | " + s["razmer"]
+                miqdor = s.get("miqdor_text", "")
+                qoplama = s.get("qoplama", "")
+
+                msg = str(i+1) + ". " + mahsulot + "\n"
+                msg += "   Miqdor: " + miqdor + "\n"
+                msg += "   Qoplama: " + qoplama
+
+                keyboard = [[
+                    InlineKeyboardButton("✏️ O'zgartir", callback_data="tahrir_" + str(i)),
+                    InlineKeyboardButton("❌ O'chir", callback_data="ochir_" + str(i)),
+                ]]
+                await query.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
+
+            keyboard = [
+                [InlineKeyboardButton("💰 Jami hisob (PDF)", callback_data="hisob_korsatish")],
+                [InlineKeyboardButton("🗑 Savatni tozalash", callback_data="savat_tozala")],
+            ]
+            await query.message.reply_text("━━━━━━━━━━━━━━\nJami hisobni ko'rish yoki tahrirlash:", reply_markup=InlineKeyboardMarkup(keyboard))
+        else:
+            await query.message.reply_text("Savat bo'sh!")
+        return CHOOSING
+
     if query.data.startswith("ochir_"):
         idx = int(query.data.replace("ochir_", ""))
         if uid in savat and 0 <= idx < len(savat[uid]):
@@ -724,7 +776,7 @@ async def eshik_soni_received(update: Update, context: ContextTypes.DEFAULT_TYPE
     jami = rom_soni * rom_narx + eshik_soni * eshik_narx
 
     keyboard = [
-        [InlineKeyboardButton("💰 Jami hisobni ko'rish (PDF)", callback_data="hisob_korsatish")],
+        [InlineKeyboardButton("🛒 Savatim", callback_data="savatim_kor")],
         [InlineKeyboardButton("➕ Yana mahsulot qo'shish", callback_data="yana_qosh")],
     ]
 
@@ -733,10 +785,9 @@ async def eshik_soni_received(update: Update, context: ContextTypes.DEFAULT_TYPE
     msg += "📏 Razmer: " + razmer + "\n"
     msg += "🖌 Qoplama: " + qoplama + "\n"
     if rom_soni > 0:
-        msg += "🪟 Rom: " + str(rom_soni) + " ta × " + format_narx(rom_narx) + " = " + format_narx(rom_soni * rom_narx) + "\n"
+        msg += "🪟 Rom: " + str(rom_soni) + " ta dona\n"
     if eshik_soni > 0:
-        msg += "🚪 Eshik: " + str(eshik_soni) + " ta × " + format_narx(eshik_narx) + " = " + format_narx(eshik_soni * eshik_narx) + "\n"
-    msg += "💰 Jami: " + format_narx(jami)
+        msg += "🚪 Eshik: " + str(eshik_soni) + " ta dona"
 
     await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
     return CHOOSING
@@ -840,7 +891,7 @@ async def miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error("Miqdor xato: " + str(e))
 
     keyboard = [
-        [InlineKeyboardButton("💰 Jami hisobni ko'rish (PDF)", callback_data="hisob_korsatish")],
+        [InlineKeyboardButton("🛒 Savatim", callback_data="savatim_kor")],
         [InlineKeyboardButton("➕ Yana mahsulot qo'shish", callback_data="yana_qosh")],
     ]
 
@@ -849,9 +900,7 @@ async def miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if razmer:
         msg += "📏 Razmer: " + razmer + "\n"
     msg += "🖌 Qoplama: " + qoplama + "\n"
-    msg += "📐 Miqdor: " + miqdor_text + "\n"
-    if jami_narx:
-        msg += "💰 Jami: " + format_narx(jami_narx)
+    msg += "📐 Miqdor: " + miqdor_text
 
     await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
     return CHOOSING
@@ -876,7 +925,7 @@ async def olcham_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     savat[uid].append(item)
 
     keyboard = [
-        [InlineKeyboardButton("💰 Jami hisobni ko'rish (PDF)", callback_data="hisob_korsatish")],
+        [InlineKeyboardButton("🛒 Savatim", callback_data="savatim_kor")],
         [InlineKeyboardButton("➕ Yana mahsulot qo'shish", callback_data="yana_qosh")],
     ]
 
