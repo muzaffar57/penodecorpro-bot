@@ -112,6 +112,8 @@ def get_birlik_narx(category, model, razmer, tur=None, qoplama="Ha"):
             narx = KARNIZ_NARXLAR[model][razmer]
         elif category == "Belbog' karnizlar":
             narx = BELBOG_NARXLAR[model][razmer]
+        elif category == "Devorga ramkalar":
+            narx = RAMKA_NARXLAR.get(model)
     except:
         return None
     if narx and qoplama == "Yo'q":
@@ -326,6 +328,7 @@ MIQDOR_SHABLONLAR = {
     "Ustunlar": "Qancha metr kerak?\nMasalan: 12",
     "Belbog' karnizlar": "Qancha metr kerak?\nMasalan: 25",
     "Karnizlar": "Qancha metr kerak?\nMasalan: 30",
+    "Devorga ramkalar": "Necha dona kerak?\nFaqat raqam yozing:\nMasalan: 3",
 }
 
 OLCHAM_SHABLONLAR = {
@@ -333,8 +336,17 @@ OLCHAM_SHABLONLAR = {
     "Yumaloq ustunlar": "Diametri yoki aylanasini va necha dona:\nMasalan: Diametri 30sm, 4 dona",
     "Kapitel va baza": "Diametri yoki aylanasini va necha dona:\nMasalan: Diametri 40sm, 4 dona",
     "Barelef gullar": "O'lchamlarni kiriting:\nUzunligi: ___\nBo'yi: ___\nSoni: ___",
-    "Devorga ramkalar": "O'lchamlarni kiriting:\nEni (sm): ___\nBo'yi (sm): ___\nSoni (dona): ___\n\nMasalan: Eni 250sm, Bo'yi 230sm, 3 dona",
     "Kalvak": "O'lchamlarni kiriting:\nUzunligi: ___\nEni: ___\nQalinligi: ___\nSoni: ___",
+}
+
+RAMKA_NARXLAR = {
+    "MODEL-01": 180000,
+    "MODEL-02": 250000,
+    "MODEL-03": 240000,
+    "MODEL-04": 190000,
+    "MODEL-05": 290000,
+    "MODEL-06": 220000,
+    "MODEL-07": 250000,
 }
 
 KAPITEL_NARXLAR = {
@@ -1143,10 +1155,13 @@ async def miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
             savat[uid] = []
         metr_match = re.search(r'(\d+[\.,]?\d*)', text)
         if metr_match:
-            metr = float(metr_match.group(1).replace(",", "."))
+            miqdor = float(metr_match.group(1).replace(",", "."))
             birlik_narx = get_birlik_narx(category, model, razmer, None, qoplama) or 0
-            jami_narx = int(metr * birlik_narx)
-            miqdor_text = str(int(metr)) + " metr"
+            jami_narx = int(miqdor * birlik_narx)
+            if category == "Devorga ramkalar":
+                miqdor_text = str(int(miqdor)) + " ta dona"
+            else:
+                miqdor_text = str(int(miqdor)) + " metr"
             savat[uid].append({
                 "category": category, "model": model, "rom_tur": "",
                 "qoplama": qoplama, "razmer": razmer,
