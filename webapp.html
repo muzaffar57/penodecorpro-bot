@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PenoDecorPro — Katalog</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F5F3EF;
+  --dark: #1C1C1E;
+  --accent: #C9A96E;
+  --accent2: #8B6914;
+  --red: #C0392B;
+  --card: #FFFFFF;
+  --text: #2C2C2E;
+  --muted: #8E8E93;
+  --border: #E5E1D8;
+  --shadow: 0 2px 20px rgba(0,0,0,0.08);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  background: var(--bg);
+  font-family: 'Jost', sans-serif;
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 100px;
+}
+
+/* HEADER */
+.header {
+  background: var(--dark);
+  padding: 16px 20px 14px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.header-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: contain;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cormorant Garamond', serif;
+  color: white;
+  font-size: 20px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.header-info h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 0.5px;
+}
+.header-info p {
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 400;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+.cart-badge {
+  margin-left: auto;
+  background: var(--accent);
+  color: var(--dark);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  display: none;
+}
+.cart-badge.show { display: block; }
+
+/* KATEGORIYALAR */
+.categories {
+  display: flex;
+  gap: 8px;
+  padding: 16px 16px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.categories::-webkit-scrollbar { display: none; }
+.cat-btn {
+  flex-shrink: 0;
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: white;
+  font-family: 'Jost', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.cat-btn.active {
+  background: var(--dark);
+  border-color: var(--dark);
+  color: white;
+}
+
+/* MAHSULOTLAR */
+.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--dark);
+  padding: 12px 16px 4px;
+}
+
+.products {
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  animation: fadeUp 0.4s ease both;
+}
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(16px); }
+  to { opacity:1; transform:translateY(0); }
+}
+
+.card-top {
+  display: flex;
+  gap: 0;
+}
+.card-img {
+  width: 110px;
+  height: 110px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--bg);
+}
+.card-img-placeholder {
+  width: 110px;
+  height: 110px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #E8E0D0, #D5C9B5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+}
+.card-info {
+  flex: 1;
+  padding: 14px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.card-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--dark);
+  line-height: 1.3;
+}
+.card-model {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+  letter-spacing: 0.5px;
+}
+.card-price {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent2);
+  margin-top: 6px;
+}
+.card-unit {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.card-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--border);
+}
+.qty-input {
+  flex: 1;
+  height: 40px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 0 12px;
+  font-family: 'Jost', sans-serif;
+  font-size: 14px;
+  color: var(--dark);
+  background: var(--bg);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.qty-input:focus { border-color: var(--accent); }
+.qty-input::placeholder { color: var(--muted); }
+.add-btn {
+  height: 40px;
+  padding: 0 16px;
+  background: var(--dark);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Jost', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.add-btn:active { transform: scale(0.96); }
+.add-btn.added {
+  background: #27AE60;
+}
+
+/* SAVAT MODALI */
+.cart-panel {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: white;
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.15);
+  z-index: 200;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.cart-panel.open { transform: translateY(0); }
+.cart-handle {
+  width: 40px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 14px auto 0;
+}
+.cart-header {
+  padding: 16px 20px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+.cart-header h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px;
+  font-weight: 700;
+}
+.cart-close {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.cart-items { padding: 12px 20px; }
+.cart-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+.cart-item:last-child { border-bottom: none; }
+.cart-item-name {
+  font-size: 14px;
+  font-weight: 500;
+  flex: 1;
+}
+.cart-item-detail {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.cart-item-price {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent2);
+  white-space: nowrap;
+}
+.cart-item-del {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: #FEE;
+  border: none;
+  color: var(--red);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.cart-total {
+  margin: 8px 20px 20px;
+  padding: 14px 16px;
+  background: var(--bg);
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.cart-total span:first-child {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.cart-total span:last-child {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--dark);
+}
+
+/* SAVAT TUGMASI */
+.cart-fab {
+  position: fixed;
+  bottom: 24px; right: 20px;
+  background: var(--dark);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 13px 20px;
+  font-family: 'Jost', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  display: none;
+  align-items: center;
+  gap: 8px;
+  z-index: 150;
+  transition: transform 0.2s;
+}
+.cart-fab.show { display: flex; }
+.cart-fab:active { transform: scale(0.96); }
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 190;
+  display: none;
+  backdrop-filter: blur(2px);
+}
+.overlay.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">P</div>
+  <div class="header-info">
+    <h1>PenoDecorPro</h1>
+    <p>Fasad bezaklari</p>
+  </div>
+  <div class="cart-badge" id="cartBadge">🛒 0</div>
+</div>
+
+<div class="categories">
+  <button class="cat-btn active" onclick="filterCat('all')">Hammasi</button>
+  <button class="cat-btn" onclick="filterCat('karniz')">Karnizlar</button>
+  <button class="cat-btn" onclick="filterCat('rom')">Rom bezaklari</button>
+  <button class="cat-btn" onclick="filterCat('ustun')">Ustunlar</button>
+  <button class="cat-btn" onclick="filterCat('belbog')">Belbog'</button>
+  <button class="cat-btn" onclick="filterCat('boshqa')">Boshqa</button>
+</div>
+
+<div id="productsContainer"></div>
+
+<div class="overlay" id="overlay" onclick="closeCart()"></div>
+
+<div class="cart-panel" id="cartPanel">
+  <div class="cart-handle"></div>
+  <div class="cart-header">
+    <h2>🛒 Savat</h2>
+    <button class="cart-close" onclick="closeCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-total" id="cartTotal" style="display:none">
+    <span>Jami summa:</span>
+    <span id="totalPrice">0 so'm</span>
+  </div>
+</div>
+
+<button class="cart-fab" id="cartFab" onclick="openCart()">
+  🛒 <span id="fabText">Savat</span>
+</button>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.expand();
+tg.setHeaderColor('#1C1C1E');
+
+// Mahsulotlar
+const products = [
+  { id: 1, cat: 'rom', name: 'Rom bezaklari', model: 'MODEL-01', emoji: '🪟', price: 140000, unit: 'dona', unitLabel: 'necha dona?' },
+  { id: 2, cat: 'rom', name: 'Rom bezaklari', model: 'MODEL-02', emoji: '🪟', price: 110000, unit: 'dona', unitLabel: 'necha dona?' },
+  { id: 3, cat: 'rom', name: 'Rom bezaklari', model: 'MODEL-03', emoji: '🪟', price: 120000, unit: 'dona', unitLabel: 'necha dona?' },
+  { id: 4, cat: 'karniz', name: 'Karnizlar', model: 'MODEL-01', emoji: '📐', price: 38000, unit: 'metr', unitLabel: 'necha metr?' },
+  { id: 5, cat: 'karniz', name: 'Karnizlar', model: 'MODEL-02', emoji: '📐', price: 22000, unit: 'metr', unitLabel: 'necha metr?' },
+  { id: 6, cat: 'karniz', name: 'Karnizlar', model: 'MODEL-03', emoji: '📐', price: 32000, unit: 'metr', unitLabel: 'necha metr?' },
+  { id: 7, cat: 'ustun', name: 'Ustunlar', model: 'MODEL-01', emoji: '🏛️', price: 18000, unit: 'metr', unitLabel: 'necha metr?' },
+  { id: 8, cat: 'ustun', name: 'Ustunlar', model: 'MODEL-02', emoji: '🏛️', price: 21000, unit: 'metr', unitLabel: 'necha metr?' },
+  { id: 9, cat: 'belbog', name: "Belbog' karniz", model: 'MODEL-01', emoji: '🎀', price: 22000, unit: 'metr', unitLabel: 'necha metr?' },
+  { id: 10, cat: 'belbog', name: "Belbog' karniz", model: 'MODEL-02', emoji: '🎀', price: 18000, unit: 'metr', unitLabel: 'necha metr?' },
+  { id: 11, cat: 'boshqa', name: 'Devorga ramka', model: 'MODEL-01', emoji: '🔲', price: 180000, unit: 'dona', unitLabel: 'necha dona?' },
+  { id: 12, cat: 'boshqa', name: 'Barelef gullar', model: 'MODEL-01', emoji: '🌸', price: 300000, unit: 'dona', unitLabel: 'necha dona?' },
+];
+
+let savat = [];
+let currentCat = 'all';
+
+function fmt(n) { return n.toLocaleString('ru-RU') + " so'm"; }
+
+function renderProducts(cat) {
+  const filtered = cat === 'all' ? products : products.filter(p => p.cat === cat);
+  const container = document.getElementById('productsContainer');
+  container.innerHTML = '';
+
+  // Kategoriya sarlavhasi
+  const catNames = { all: 'Barcha mahsulotlar', karniz: 'Karnizlar', rom: 'Rom bezaklari', ustun: 'Ustunlar', belbog: "Belbog' karnizlar", boshqa: 'Boshqa mahsulotlar' };
+  container.innerHTML = `<div class="section-title">${catNames[cat]}</div>`;
+
+  const grid = document.createElement('div');
+  grid.className = 'products';
+
+  filtered.forEach((p, i) => {
+    const inCart = savat.find(s => s.id === p.id);
+    grid.innerHTML += `
+      <div class="card" style="animation-delay:${i * 0.05}s">
+        <div class="card-top">
+          <div class="card-img-placeholder">${p.emoji}</div>
+          <div class="card-info">
+            <div>
+              <div class="card-name">${p.name}</div>
+              <div class="card-model">${p.model}</div>
+            </div>
+            <div class="card-price">${fmt(p.price)} <span class="card-unit">/${p.unit}</span></div>
+          </div>
+        </div>
+        <div class="card-bottom">
+          <input class="qty-input" id="qty_${p.id}" type="number" min="1" placeholder="${p.unitLabel}" value="${inCart ? inCart.qty : ''}">
+          <button class="add-btn ${inCart ? 'added' : ''}" id="btn_${p.id}" onclick="addToCart(${p.id})">
+            ${inCart ? '✓ Savatda' : '+ Qo\'shish'}
+          </button>
+        </div>
+      </div>`;
+  });
+
+  container.appendChild(grid);
+}
+
+function filterCat(cat) {
+  currentCat = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderProducts(cat);
+}
+
+function addToCart(id) {
+  const p = products.find(x => x.id === id);
+  const qtyInput = document.getElementById(`qty_${id}`);
+  const qty = parseFloat(qtyInput.value);
+
+  if (!qty || qty <= 0) {
+    qtyInput.style.borderColor = '#C0392B';
+    qtyInput.focus();
+    setTimeout(() => qtyInput.style.borderColor = '', 1000);
+    return;
+  }
+
+  const existing = savat.findIndex(s => s.id === id);
+  if (existing >= 0) {
+    savat[existing].qty = qty;
+    savat[existing].jami = qty * p.price;
+  } else {
+    savat.push({ id, name: p.name, model: p.model, unit: p.unit, price: p.price, qty, jami: qty * p.price });
+  }
+
+  const btn = document.getElementById(`btn_${id}`);
+  btn.textContent = '✓ Savatda';
+  btn.classList.add('added');
+
+  updateUI();
+}
+
+function removeFromCart(id) {
+  savat = savat.filter(s => s.id !== id);
+  updateUI();
+  renderCartItems();
+  renderProducts(currentCat);
+}
+
+function updateUI() {
+  const total = savat.reduce((s, i) => s + i.jami, 0);
+  const count = savat.length;
+
+  // Badge
+  const badge = document.getElementById('cartBadge');
+  badge.textContent = `🛒 ${count}`;
+  badge.classList.toggle('show', count > 0);
+
+  // FAB
+  const fab = document.getElementById('cartFab');
+  fab.classList.toggle('show', count > 0);
+  document.getElementById('fabText').textContent = `${count} ta — ${fmt(total)}`;
+
+  // Telegram MainButton
+  if (count > 0) {
+    tg.MainButton.setText(`✅ Buyurtmani tasdiqlash — ${fmt(total)}`);
+    tg.MainButton.show();
+    tg.MainButton.color = '#1C1C1E';
+  } else {
+    tg.MainButton.hide();
+  }
+
+  renderCartItems();
+}
+
+function renderCartItems() {
+  const container = document.getElementById('cartItems');
+  const totalEl = document.getElementById('cartTotal');
+
+  if (savat.length === 0) {
+    container.innerHTML = '<p style="text-align:center;color:#8E8E93;padding:20px 0;font-size:14px;">Savat bo\'sh</p>';
+    totalEl.style.display = 'none';
+    return;
+  }
+
+  const total = savat.reduce((s, i) => s + i.jami, 0);
+  container.innerHTML = savat.map(item => `
+    <div class="cart-item">
+      <div>
+        <div class="cart-item-name">${item.name} — ${item.model}</div>
+        <div class="cart-item-detail">${item.qty} ${item.unit} × ${fmt(item.price)}</div>
+      </div>
+      <div class="cart-item-price">${fmt(item.jami)}</div>
+      <button class="cart-item-del" onclick="removeFromCart(${item.id})">✕</button>
+    </div>
+  `).join('');
+
+  document.getElementById('totalPrice').textContent = fmt(total);
+  totalEl.style.display = 'flex';
+}
+
+function openCart() {
+  document.getElementById('cartPanel').classList.add('open');
+  document.getElementById('overlay').classList.add('show');
+}
+
+function closeCart() {
+  document.getElementById('cartPanel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+// Telegram MainButton bosilganda
+tg.MainButton.onClick(() => {
+  const total = savat.reduce((s, i) => s + i.jami, 0);
+  const data = {
+    savat: savat.map(i => ({
+      mahsulot: `${i.name} — ${i.model}`,
+      miqdor: `${i.qty} ${i.unit}`,
+      birlik_narx: i.price,
+      jami: i.jami,
+    })),
+    jami_summa: total,
+  };
+  tg.sendData(JSON.stringify(data));
+});
+
+// Boshlash
+renderProducts('all');
+tg.ready();
+</script>
+</body>
+</html>
