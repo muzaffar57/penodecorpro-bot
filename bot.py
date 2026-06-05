@@ -1,5 +1,7 @@
 import os
 import logging
+import gspread
+from google.oauth2.service_account import Credentials
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler, ConversationHandler
 
@@ -8,6 +10,14 @@ logger = logging.getLogger(__name__)
 
 TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
+
+# Google Sheets linklari
+SHEETS = {
+    "rom": "https://docs.google.com/spreadsheets/d/10AvifJVAE_nWml3U0IEDQU4h2-vsOBZt3MRZII7SYRM",
+    "ustun": "https://docs.google.com/spreadsheets/d/18wKIn4C20qkTMfQ5F2V20TJ-VptBK7HCF3dp9-PWGlg",
+    "karniz": "https://docs.google.com/spreadsheets/d/13y4wsnY8BwoOiQRFNzrqeZFvY1oxhJcZh0Cd-JGkDAs",
+    "belbog": "https://docs.google.com/spreadsheets/d/1gj7bPGtK2Cws9_yvwao1aTLnt7E-dQeb5xmWQx2yNoU",
+}
 
 KATALOG_LINKS = {
     "Rom bezaklari": "https://muzaffar57.github.io/-penodecor-katalog/katalog.html",
@@ -33,26 +43,22 @@ KATALOG_COUNTS = {
     "Barelef gullar": 7,
 }
 
-# O'lcham so'rash shablonlari
+USTUN_RAZMERLAR = ["25sm", "30sm", "35sm", "40sm", "45sm", "50sm"]
+KARNIZ_RAZMERLAR = ["Kichik (17sm)", "Ortacha (20sm)", "Katta (25sm)", "25sm dan katta"]
+
 OLCHAM_SHABLONLAR = {
     "Rom bezaklari": "Nechta rom va nechta eshik bor?\nMasalan: 8 ta rom, 4 ta eshik",
     "Ustunlar": "Qancha metr kerak?\nMasalan: 12 metr",
     "Belbog' karnizlar": "Qancha metr kerak?\nMasalan: 25 metr",
     "Karnizlar": "Qancha metr kerak?\nMasalan: 30 metr",
-    "Shohona karnizlar": "Qancha metr kerak?\nMasalan: 20 metr",
-    "Yumaloq ustunlar": "Aylanasi yoki diametri va sonini kiriting:\nMasalan: Diametri 30sm, 4 dona",
-    "Kapitel va baza": "Aylanasi yoki diametri va sonini kiriting:\nMasalan: Diametri 40sm, 4 dona",
+    "Shohona karnizlar": "Bo'yi necha sm kerak? (40sm dan boshlanadi)\nMasalan: 40sm, 50sm, 60sm...\nHamda qancha metr kerakligini yozing.",
+    "Yumaloq ustunlar": "Diametri yoki aylanasini kiriting:\nMasalan: Diametri 30sm yoki Aylanasi 94sm\nHamda necha dona kerakligini yozing.",
+    "Kapitel va baza": "Diametri yoki aylanasini kiriting:\nMasalan: Diametri 40sm yoki Aylanasi 126sm\nHamda necha dona kerakligini yozing.",
     "Barelef gullar": "O'lchamlarni kiriting:\nUzunligi: ___\nBo'yi: ___\nSoni: ___",
     "Kalvak": "O'lchamlarni kiriting:\nUzunligi: ___\nEni: ___\nQalinligi: ___\nSoni: ___",
 }
 
-# Razmer tanlash kerak bo'lgan bo'limlar
-RAZMER_KERAK = ["Karnizlar", "Belbog' karnizlar", "Shohona karnizlar", "Ustunlar"]
-
-USTUN_RAZMERLAR = ["25sm", "30sm", "35sm", "40sm", "45sm", "50sm"]
-KARNIZ_RAZMERLAR = ["Kichik (17sm)", "O'rtacha (20sm)", "Katta (25sm)", "25sm dan katta — aloqaga chiqing"]
-
-CHOOSING, MODEL_SELECTION, QOPLAMA, RAZMER_TANLOV, OLCHAM, LOYIHA_PHOTO, FASAD_PHOTO, CUSTOM_PHOTO = range(8)
+CHOOSING, MODEL_SELECTION, QOPLAMA, RAZMER_TANLOV, ROM_TUR, OLCHAM, LOYIHA_PHOTO, FASAD_PHOTO, CUSTOM_PHOTO = range(9)
 
 orders = {}
 savat = {}
@@ -103,7 +109,8 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
             msg = "🛒 Savatingiz:\n\n"
             for i, s in enumerate(savat[uid], 1):
                 msg += str(i) + ". " + s["category"] + " — " + s.get("model", "") + "\n"
-                msg += "   " + s.get("olcham", "") + "\n\n"
+                msg += "   " + s.get("olcham", "") + "\n"
+                msg += "   Qoplama: " + s.get("qoplama", "") + "\n\n"
             keyboard = [
                 [InlineKeyboardButton("✅ Buyurtma berish", callback_data="buyurtma_ber")],
                 [InlineKeyboardButton("🗑 Savatni tozalash", callback_data="savat_tozala")],
@@ -182,19 +189,33 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         model = "MODEL-" + query.data.replace("model_", "")
         context.user_data["model"] = model
 
-        # Razmer kerakmi?
-        if category in RAZMER_KERAK:
-            if category == "Ustunlar":
-                buttons = [[InlineKeyboardButton(r, callback_data="razmer_" + r)] for r in USTUN_RAZMERLAR]
-            else:
-                buttons = [[InlineKeyboardButton(r, callback_data="razmer_" + r)] for r in KARNIZ_RAZMERLAR]
+        if category == "Rom bezaklari":
+            keyboard = [
+                [InlineKeyboardButton("🪟 Rom bezak", callback_data="romtur_rom")],
+                [InlineKeyboardButton("🚪 Eshik bezak", callback_data="romtur_eshik")],
+            ]
+            await query.message.reply_text(
+                model + " tanlandingiz!\n\nQaysi tur kerak?",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+            return ROM_TUR
+
+        if category in ["Karnizlar", "Belbog' karnizlar"]:
+            buttons = [[InlineKeyboardButton(r, callback_data="razmer_" + r)] for r in KARNIZ_RAZMERLAR]
             await query.message.reply_text(
                 model + " tanlandingiz!\n\nRazmer tanlang:",
                 reply_markup=InlineKeyboardMarkup(buttons)
             )
             return RAZMER_TANLOV
 
-        # Qoplama so'rash
+        if category == "Ustunlar":
+            buttons = [[InlineKeyboardButton(r, callback_data="razmer_" + r)] for r in USTUN_RAZMERLAR]
+            await query.message.reply_text(
+                model + " tanlandingiz!\n\nRazmer tanlang:",
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
+            return RAZMER_TANLOV
+
         keyboard = [
             [InlineKeyboardButton("✅ Ha, qoplama bilan", callback_data="qoplama_ha")],
             [InlineKeyboardButton("❌ Yo'q, qoplama siz", callback_data="qoplama_yoq")],
@@ -205,15 +226,27 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return QOPLAMA
 
+    if query.data.startswith("romtur_"):
+        tur = "Rom bezak" if query.data == "romtur_rom" else "Eshik bezak"
+        context.user_data["rom_tur"] = tur
+        keyboard = [
+            [InlineKeyboardButton("Katta razmer", callback_data="razmer_Katta razmer")],
+            [InlineKeyboardButton("Kichik razmer", callback_data="razmer_Kichik razmer")],
+        ]
+        await query.message.reply_text(
+            tur + " tanlandi!\n\nRazmer tanlang:",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return RAZMER_TANLOV
+
     if query.data.startswith("razmer_"):
         razmer = query.data.replace("razmer_", "")
         context.user_data["razmer"] = razmer
 
-        if razmer == "25sm dan katta — aloqaga chiqing":
+        if razmer == "25sm dan katta":
             await query.message.reply_text(
                 "Katta razmer uchun bizga murojaat qiling:\n\n"
-                "📞 Telefon: +998 XX XXX XX XX\n"
-                "📱 Telegram: @PenoDecorPro"
+                "📞 Telefon orqali yoki admin bilan bog'laning."
             )
             return CHOOSING
 
@@ -239,7 +272,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return CUSTOM_PHOTO
 
     if query.data == "buyurtma_ber":
-        uid = query.from_user.id
         user = query.from_user
         if uid in savat and savat[uid]:
             msg = "🆕 YANGI BUYURTMA!\n\n"
@@ -248,8 +280,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             msg += "🛒 Buyurtma tarkibi:\n\n"
             for i, s in enumerate(savat[uid], 1):
                 msg += str(i) + ". " + s["category"] + " — " + s.get("model", "") + "\n"
-                msg += "   O'lcham: " + s.get("olcham", "") + "\n"
-                msg += "   Qoplama: " + s.get("qoplama", "") + "\n\n"
+                msg += "   Razmer: " + s.get("razmer", "") + "\n"
+                msg += "   Qoplama: " + s.get("qoplama", "") + "\n"
+                msg += "   O'lcham: " + s.get("olcham", "") + "\n\n"
 
             if ADMIN_ID:
                 await context.bot.send_message(chat_id=ADMIN_ID, text=msg)
@@ -281,13 +314,15 @@ async def olcham_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     model = context.user_data.get("model", "Noma'lum")
     qoplama = context.user_data.get("qoplama", "Yo'q")
     razmer = context.user_data.get("razmer", "")
+    rom_tur = context.user_data.get("rom_tur", "")
 
     item = {
         "category": category,
         "model": model,
+        "rom_tur": rom_tur,
         "qoplama": qoplama,
-        "olcham": olcham,
         "razmer": razmer,
+        "olcham": olcham,
     }
 
     if uid not in savat:
@@ -295,16 +330,21 @@ async def olcham_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     savat[uid].append(item)
 
     keyboard = [
-        [InlineKeyboardButton("🛒 Savatni ko'rish", callback_data="savat_kor")],
+        [InlineKeyboardButton("🛒 Savatni ko'rish va buyurtma berish", callback_data="buyurtma_ber")],
         [InlineKeyboardButton("➕ Yana mahsulot qo'shish", callback_data="yana_qosh")],
     ]
-    await update.message.reply_text(
-        "✅ Savatga qo'shildi!\n\n"
-        "📦 " + category + " — " + model + "\n"
-        "📐 " + olcham + "\n"
-        "🖌 Qoplama: " + qoplama,
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+
+    msg = "✅ Savatga qo'shildi!\n\n"
+    msg += "📦 " + category + "\n"
+    if rom_tur:
+        msg += "🚪 Tur: " + rom_tur + "\n"
+    msg += "🎨 Model: " + model + "\n"
+    if razmer:
+        msg += "📏 Razmer: " + razmer + "\n"
+    msg += "🖌 Qoplama: " + qoplama + "\n"
+    msg += "📐 O'lcham: " + olcham
+
+    await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
     return CHOOSING
 
 
@@ -409,6 +449,7 @@ def main():
                 CallbackQueryHandler(button_handler),
                 MessageHandler(filters.PHOTO, custom_photo_received),
             ],
+            ROM_TUR: [CallbackQueryHandler(button_handler)],
             RAZMER_TANLOV: [CallbackQueryHandler(button_handler)],
             QOPLAMA: [CallbackQueryHandler(button_handler)],
             OLCHAM: [MessageHandler(filters.TEXT & ~filters.COMMAND, olcham_received)],
