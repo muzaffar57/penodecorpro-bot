@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 import gspread
 from google.oauth2.service_account import Credentials
@@ -11,13 +12,47 @@ logger = logging.getLogger(__name__)
 TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
 
-# Google Sheets linklari
-SHEETS = {
-    "rom": "https://docs.google.com/spreadsheets/d/10AvifJVAE_nWml3U0IEDQU4h2-vsOBZt3MRZII7SYRM",
-    "ustun": "https://docs.google.com/spreadsheets/d/18wKIn4C20qkTMfQ5F2V20TJ-VptBK7HCF3dp9-PWGlg",
-    "karniz": "https://docs.google.com/spreadsheets/d/13y4wsnY8BwoOiQRFNzrqeZFvY1oxhJcZh0Cd-JGkDAs",
-    "belbog": "https://docs.google.com/spreadsheets/d/1gj7bPGtK2Cws9_yvwao1aTLnt7E-dQeb5xmWQx2yNoU",
+# Google Sheets ID lari
+SHEET_IDS = {
+    "rom": "10AvifJVAE_nWml3U0IEDQU4h2-vsOBZt3MRZII7SYRM",
+    "ustun": "18wKIn4C20qkTMfQ5F2V20TJ-VptBK7HCF3dp9-PWGlg",
+    "karniz": "13y4wsnY8BwoOiQRFNzrqeZFvY1oxhJcZh0Cd-JGkDAs",
+    "belbog": "1gj7bPGtK2Cws9_yvwao1aTLnt7E-dQeb5xmWQx2yNoU",
 }
+
+def get_gspread_client():
+    creds_json = os.environ.get("GOOGLE_CREDENTIALS")
+    creds_dict = json.loads(creds_json)
+    scopes = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    return gspread.authorize(creds)
+
+def get_narx(sheet_key, model, razmer, tur=None):
+    try:
+        client = get_gspread_client()
+        sh = client.open_by_key(SHEET_IDS[sheet_key])
+        ws = sh.get_worksheet(0)
+        data = ws.get_all_values()
+
+        for row in data:
+            if len(row) < 4:
+                continue
+            row_model = row[0].strip()
+            row_tur = row[1].strip() if sheet_key == "rom" else ""
+            row_razmer = row[2].strip() if sheet_key == "rom" else row[1].strip()
+            row_narx = row[2].strip() if sheet_key != "rom" else row[3].strip()
+
+            if sheet_key == "rom":
+                if row_model == model and tur and tur in row_tur and razmer in row_razmer:
+                    narx_str = row_narx.replace(" ", "").replace(",", "").replace(".", "")
+                    return int(narx_str) if narx_str.isdigit() else None
+            else:
+                if row_model == model and razmer in row_razmer:
+                    narx_str = row_narx.replace(" ", "").replace(",", "").replace(".", "")
+                    return int(narx_str) if narx_str.isdigit() else None
+    except Exception as e:
+        logger.error("Narx olishda xato: " + str(e))
+    return None
 
 KATALOG_LINKS = {
     "Rom bezaklari": "https://muzaffar57.github.io/-penodecor-katalog/katalog.html",
@@ -51,9 +86,9 @@ OLCHAM_SHABLONLAR = {
     "Ustunlar": "Qancha metr kerak?\nMasalan: 12 metr",
     "Belbog' karnizlar": "Qancha metr kerak?\nMasalan: 25 metr",
     "Karnizlar": "Qancha metr kerak?\nMasalan: 30 metr",
-    "Shohona karnizlar": "Bo'yi necha sm kerak? (40sm dan boshlanadi)\nMasalan: 40sm, 50sm, 60sm...\nHamda qancha metr kerakligini yozing.",
-    "Yumaloq ustunlar": "Diametri yoki aylanasini kiriting:\nMasalan: Diametri 30sm yoki Aylanasi 94sm\nHamda necha dona kerakligini yozing.",
-    "Kapitel va baza": "Diametri yoki aylanasini kiriting:\nMasalan: Diametri 40sm yoki Aylanasi 126sm\nHamda necha dona kerakligini yozing.",
+    "Shohona karnizlar": "Bo'yi necha sm va qancha metr kerak?\nMasalan: Bo'yi 50sm, 20 metr",
+    "Yumaloq ustunlar": "Diametri yoki aylanasini va necha dona:\nMasalan: Diametri 30sm, 4 dona",
+    "Kapitel va baza": "Diametri yoki aylanasini va necha dona:\nMasalan: Diametri 40sm, 4 dona",
     "Barelef gullar": "O'lchamlarni kiriting:\nUzunligi: ___\nBo'yi: ___\nSoni: ___",
     "Kalvak": "O'lchamlarni kiriting:\nUzunligi: ___\nEni: ___\nQalinligi: ___\nSoni: ___",
 }
@@ -280,9 +315,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             msg += "🛒 Buyurtma tarkibi:\n\n"
             for i, s in enumerate(savat[uid], 1):
                 msg += str(i) + ". " + s["category"] + " — " + s.get("model", "") + "\n"
-                msg += "   Razmer: " + s.get("razmer", "") + "\n"
+                if s.get("rom_tur"):
+                    msg += "   Tur: " + s["rom_tur"] + "\n"
+                if s.get("razmer"):
+                    msg += "   Razmer: " + s["razmer"] + "\n"
                 msg += "   Qoplama: " + s.get("qoplama", "") + "\n"
-                msg += "   O'lcham: " + s.get("olcham", "") + "\n\n"
+                msg += "   O'lcham: " + s.get("olcham", "") + "\n"
+                if s.get("narx"):
+                    msg += "   Narx: " + str(s["narx"]) + " so'm\n"
+                msg += "\n"
 
             if ADMIN_ID:
                 await context.bot.send_message(chat_id=ADMIN_ID, text=msg)
