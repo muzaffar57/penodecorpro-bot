@@ -373,17 +373,12 @@ savat = {}
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     keyboard = [
-        [KeyboardButton("Rom bezaklari"), KeyboardButton("Ustunlar")],
-        [KeyboardButton("Belbog' karnizlar"), KeyboardButton("Yumaloq ustunlar")],
-        [KeyboardButton("Kapitel va baza"), KeyboardButton("Kalvak")],
-        [KeyboardButton("Karnizlar"), KeyboardButton("Shohona karnizlar")],
-        [KeyboardButton("Barelef gullar"), KeyboardButton("Devorga ramkalar")],
-        [KeyboardButton("📐 Loyiha bo'yicha hisoblash")],
-        [KeyboardButton("🏠 Fasad loyihasi tayyorlash")],
-        [KeyboardButton("🏗️ Bajarilgan loyihalar")],
-        [KeyboardButton("🌟 Keng qamrovlik yechim")],
-        [KeyboardButton("📞 Kontaktlar")],
-        [KeyboardButton("🛒 Savatim"), KeyboardButton("💰 Jami hisob (PDF)")],
+        [KeyboardButton("📐 Mahsulotlar (Katalog)")],
+        [KeyboardButton("🧮 Loyiha bo'yicha hisoblash")],
+        [KeyboardButton("🏡 Fasad loyihasi tayyorlash")],
+        [KeyboardButton("🏗 Bajarilgan loyihalar")],
+        [KeyboardButton("🛒 Savatim"), KeyboardButton("🧾 Jami hisob (PDF)")],
+        [KeyboardButton("📞 Kontaktlar / Menejer")],
     ]
     markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
@@ -502,7 +497,35 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     uid = user.id
 
-    if text == "💰 Jami hisob (PDF)":
+    if text == "📐 Mahsulotlar (Katalog)":
+        keyboard2 = ReplyKeyboardMarkup([
+            [KeyboardButton("Rom bezaklari"), KeyboardButton("Ustunlar")],
+            [KeyboardButton("Belbog' karnizlar"), KeyboardButton("Yumaloq ustunlar")],
+            [KeyboardButton("Kapitel va baza"), KeyboardButton("Kalvak")],
+            [KeyboardButton("Karnizlar"), KeyboardButton("Shohona karnizlar")],
+            [KeyboardButton("Barelef gullar"), KeyboardButton("Devorga ramkalar")],
+            [KeyboardButton("🌟 Keng qamrovlik yechim")],
+            [KeyboardButton("🔙 Bosh menyu")],
+        ], resize_keyboard=True)
+        await update.message.reply_text(
+            "📐 Mahsulotlar katalogi\n\nQaysi bo'limni ko'rmoqchisiz?",
+            reply_markup=keyboard2
+        )
+        return CHOOSING
+
+    if text == "🔙 Bosh menyu":
+        keyboard_main = ReplyKeyboardMarkup([
+            [KeyboardButton("📐 Mahsulotlar (Katalog)")],
+            [KeyboardButton("🧮 Loyiha bo'yicha hisoblash")],
+            [KeyboardButton("🏡 Fasad loyihasi tayyorlash")],
+            [KeyboardButton("🏗 Bajarilgan loyihalar")],
+            [KeyboardButton("🛒 Savatim"), KeyboardButton("🧾 Jami hisob (PDF)")],
+            [KeyboardButton("📞 Kontaktlar / Menejer")],
+        ], resize_keyboard=True)
+        await update.message.reply_text("Bosh menyu:", reply_markup=keyboard_main)
+        return CHOOSING
+
+    if text == "🧾 Jami hisob (PDF)":
         if uid in savat and savat[uid]:
             try:
                 mijoz_ism = user.first_name + " " + (user.last_name or "")
@@ -573,17 +596,17 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Savat bo'sh. Mahsulot tanlang!")
         return CHOOSING
 
-    if text == "📐 Loyiha bo'yicha hisoblash":
+    if text == "🧮 Loyiha bo'yicha hisoblash":
         context.user_data["category"] = text
         await update.message.reply_text("📐 Loyiha bo'yicha hisoblash\n\nLoyihangiz rasmini yuboring.")
         return LOYIHA_PHOTO
 
-    if text == "🏠 Fasad loyihasi tayyorlash":
+    if text == "🏡 Fasad loyihasi tayyorlash":
         context.user_data["category"] = text
         await update.message.reply_text("🏠 Fasad loyihasi tayyorlash\n\nUyingizning fasad rasmini yuboring va yoqtirgan modellarni yozing.")
         return FASAD_PHOTO
 
-    if text == "📞 Kontaktlar":
+    if text == "📞 Kontaktlar / Menejer":
         await update.message.reply_text(
             "📞 BIZ BILAN BOG'LANING\n\n"
             "📱 Telefon raqamlar:\n"
@@ -607,7 +630,7 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return CHOOSING
 
-    if text == "🏗️ Bajarilgan loyihalar":
+    if text == "🏗 Bajarilgan loyihalar":
         await update.message.reply_text("🏗️ Bajarilgan loyihalar:\n\nhttps://muzaffar57.github.io/-penodecor-katalog/loyihalar.html")
         return CHOOSING
 
