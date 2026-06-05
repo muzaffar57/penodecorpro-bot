@@ -474,7 +474,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     return QOPLAMA
 
     await update.message.reply_text(
-        "Assalomu alaykum, " + user.first_name + "!\n\nPenoDecorPro botiga xush kelibsiz!\nQuyidagi bo'limlardan birini tanlang:",
+        "Assalomu alaykum, " + user.first_name + "! 👋\n\n"
+        "🏛️ *PenoDecorPro* botiga xush kelibsiz!\n\n"
+        "Biz Andijon shahrida fasad bezaklari ishlab chiqaramiz:\n\n"
+        "🪟 Rom va eshik bezaklari\n"
+        "📐 Karnizlar va belbog' karnizlar\n"
+        "🏛️ Ustunlar va yumaloq ustunlar\n"
+        "🌸 Barelef gullar va kalvak\n"
+        "🔲 Devorga ramkalar\n\n"
+        "Bu bot orqali:\n"
+        "✅ Katalogni ko'rishingiz\n"
+        "✅ Narxlarni bilishingiz\n"
+        "✅ PDF hisob-kitob olishingiz\n"
+        "✅ Buyurtma berishingiz mumkin!\n\n"
+        "👇 Quyidagi menyudan boshlang:",
+        parse_mode="Markdown"
+    )
+    await update.message.reply_text(
+        "Quyidagi bo'limlardan birini tanlang:",
         reply_markup=markup
     )
     return CHOOSING
