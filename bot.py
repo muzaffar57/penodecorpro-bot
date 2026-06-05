@@ -1037,8 +1037,10 @@ async def eshik_soni_received(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not razmer:
         razmer = "Katta razmer"
 
+    logger.info(f"DEBUG eshik: model={model}, razmer={razmer}, qoplama={qoplama}")
     rom_narx = get_birlik_narx(category, model, razmer, "Rom bezak", qoplama) or 0
     eshik_narx = get_birlik_narx(category, model, razmer, "Eshik bezak", qoplama) or 0
+    logger.info(f"DEBUG narxlar: rom_narx={rom_narx}, eshik_narx={eshik_narx}")
 
     if uid not in savat:
         savat[uid] = []
