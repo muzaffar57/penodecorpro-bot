@@ -301,12 +301,14 @@ KATALOG_LINKS = {
     "Karnizlar": "https://muzaffar57.github.io/-penodecor-katalog/karniz.html",
     "Shohona karnizlar": "https://muzaffar57.github.io/-penodecor-katalog/shohona.html",
     "Barelef gullar": "https://muzaffar57.github.io/-penodecor-katalog/barelef.html",
+    "Devorga ramkalar": "https://muzaffar57.github.io/-penodecor-katalog/ramka.html",
 }
 
 KATALOG_COUNTS = {
     "Rom bezaklari": 16, "Ustunlar": 13, "Belbog' karnizlar": 27,
     "Yumaloq ustunlar": 12, "Kapitel va baza": 16, "Kalvak": 9,
     "Karnizlar": 26, "Shohona karnizlar": 12, "Barelef gullar": 7,
+    "Devorga ramkalar": 7,
 }
 
 USTUN_RAZMERLAR = ["25sm", "30sm", "35sm", "40sm", "45sm", "50sm"]
@@ -331,6 +333,7 @@ OLCHAM_SHABLONLAR = {
     "Yumaloq ustunlar": "Diametri yoki aylanasini va necha dona:\nMasalan: Diametri 30sm, 4 dona",
     "Kapitel va baza": "Diametri yoki aylanasini va necha dona:\nMasalan: Diametri 40sm, 4 dona",
     "Barelef gullar": "O'lchamlarni kiriting:\nUzunligi: ___\nBo'yi: ___\nSoni: ___",
+    "Devorga ramkalar": "O'lchamlarni kiriting:\nEni (sm): ___\nBo'yi (sm): ___\nSoni (dona): ___\n\nMasalan: Eni 250sm, Bo'yi 230sm, 3 dona",
     "Kalvak": "O'lchamlarni kiriting:\nUzunligi: ___\nEni: ___\nQalinligi: ___\nSoni: ___",
 }
 
@@ -356,7 +359,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [KeyboardButton("Belbog' karnizlar"), KeyboardButton("Yumaloq ustunlar")],
         [KeyboardButton("Kapitel va baza"), KeyboardButton("Kalvak")],
         [KeyboardButton("Karnizlar"), KeyboardButton("Shohona karnizlar")],
-        [KeyboardButton("Barelef gullar")],
+        [KeyboardButton("Barelef gullar"), KeyboardButton("Devorga ramkalar")],
         [KeyboardButton("📐 Loyiha bo'yicha hisoblash")],
         [KeyboardButton("🏠 Fasad loyihasi tayyorlash")],
         [KeyboardButton("🏗️ Bajarilgan loyihalar")],
