@@ -117,6 +117,15 @@ def sheets_dan_narx_ol():
         return ZAXIRA_NARXLAR
 
 
+def chegirma_ol() -> int:
+    """Sheets dan chegirma foizini oladi (0-100)."""
+    hozir = time.time()
+    if _kesh["narxlar"] is None or (hozir - _kesh["vaqt"]) > _kesh["muddat"]:
+        _kesh["narxlar"] = sheets_dan_narx_ol()
+        _kesh["vaqt"] = hozir
+    return _kesh["narxlar"].get("Chegirma_foiz", 0)
+
+
 def narx_ol(kalit: str) -> int:
     hozir = time.time()
     if _kesh["narxlar"] is None or (hozir - _kesh["vaqt"]) > _kesh["muddat"]:
