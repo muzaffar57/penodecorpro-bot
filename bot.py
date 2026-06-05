@@ -1027,7 +1027,9 @@ async def eshik_soni_received(update: Update, context: ContextTypes.DEFAULT_TYPE
     category = context.user_data.get("category", "")
     model = context.user_data.get("model", "")
     qoplama = context.user_data.get("qoplama", "Ha")
-    razmer = context.user_data.get("razmer", "")
+    razmer = context.user_data.get("razmer", "Katta razmer")
+    if not razmer:
+        razmer = "Katta razmer"
 
     rom_narx = get_birlik_narx(category, model, razmer, "Rom bezak", qoplama) or 0
     eshik_narx = get_birlik_narx(category, model, razmer, "Eshik bezak", qoplama) or 0
