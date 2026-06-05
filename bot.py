@@ -18,7 +18,6 @@ KATALOG_LINKS = {
     "Kalvak": "https://muzaffar57.github.io/-penodecor-katalog/kalvak.html",
     "Karnizlar": "https://muzaffar57.github.io/-penodecor-katalog/karniz.html",
     "Shohona karnizlar": "https://muzaffar57.github.io/-penodecor-katalog/shohona.html",
-    "Termopanellar": "https://muzaffar57.github.io/-penodecor-katalog/termopanel.html",
     "Barelef gullar": "https://muzaffar57.github.io/-penodecor-katalog/barelef.html",
 }
 
@@ -26,31 +25,37 @@ KATALOG_COUNTS = {
     "Rom bezaklari": 16,
     "Ustunlar": 13,
     "Belbog' karnizlar": 27,
-    "Yumaloq ustunlar": 13,
+    "Yumaloq ustunlar": 12,
     "Kapitel va baza": 16,
-    "Kalvak": 16,
-    "Karnizlar": 16,
-    "Shohona karnizlar": 16,
-    "Termopanellar": 16,
-    "Barelef gullar": 16,
+    "Kalvak": 9,
+    "Karnizlar": 26,
+    "Shohona karnizlar": 12,
+    "Barelef gullar": 7,
 }
 
-CHOOSING, MODEL_SELECTION, QOPLAMA, RAZMER, LOYIHA_PHOTO, FASAD_PHOTO, CUSTOM_PHOTO = range(7)
+# O'lcham so'rash shablonlari
+OLCHAM_SHABLONLAR = {
+    "Rom bezaklari": "Nechta rom va nechta eshik bor?\nMasalan: 8 ta rom, 4 ta eshik",
+    "Ustunlar": "Qancha metr kerak?\nMasalan: 12 metr",
+    "Belbog' karnizlar": "Qancha metr kerak?\nMasalan: 25 metr",
+    "Karnizlar": "Qancha metr kerak?\nMasalan: 30 metr",
+    "Shohona karnizlar": "Qancha metr kerak?\nMasalan: 20 metr",
+    "Yumaloq ustunlar": "Aylanasi yoki diametri va sonini kiriting:\nMasalan: Diametri 30sm, 4 dona",
+    "Kapitel va baza": "Aylanasi yoki diametri va sonini kiriting:\nMasalan: Diametri 40sm, 4 dona",
+    "Barelef gullar": "O'lchamlarni kiriting:\nUzunligi: ___\nBo'yi: ___\nSoni: ___",
+    "Kalvak": "O'lchamlarni kiriting:\nUzunligi: ___\nEni: ___\nQalinligi: ___\nSoni: ___",
+}
+
+# Razmer tanlash kerak bo'lgan bo'limlar
+RAZMER_KERAK = ["Karnizlar", "Belbog' karnizlar", "Shohona karnizlar", "Ustunlar"]
+
+USTUN_RAZMERLAR = ["25sm", "30sm", "35sm", "40sm", "45sm", "50sm"]
+KARNIZ_RAZMERLAR = ["Kichik (17sm)", "O'rtacha (20sm)", "Katta (25sm)", "25sm dan katta — aloqaga chiqing"]
+
+CHOOSING, MODEL_SELECTION, QOPLAMA, RAZMER_TANLOV, OLCHAM, LOYIHA_PHOTO, FASAD_PHOTO, CUSTOM_PHOTO = range(8)
 
 orders = {}
-
-OLCHAM_SHABLON = (
-    "📐 O'lchamlarni kiriting:\n\n"
-    "Bo'yi: ___\n"
-    "Qalinligi: ___\n"
-    "Uzunligi (metr): ___\n"
-    "Soni (dona): ___\n\n"
-    "Namuna:\n"
-    "Bo'yi: 20sm\n"
-    "Qalinligi: 5sm\n"
-    "Uzunligi (metr): 3\n"
-    "Soni (dona): 10"
-)
+savat = {}
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -60,12 +65,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [KeyboardButton("Belbog' karnizlar"), KeyboardButton("Yumaloq ustunlar")],
         [KeyboardButton("Kapitel va baza"), KeyboardButton("Kalvak")],
         [KeyboardButton("Karnizlar"), KeyboardButton("Shohona karnizlar")],
-        [KeyboardButton("Termopanellar"), KeyboardButton("Barelef gullar")],
+        [KeyboardButton("Barelef gullar")],
         [KeyboardButton("📐 Loyiha bo'yicha hisoblash")],
         [KeyboardButton("🏠 Fasad loyihasi tayyorlash")],
         [KeyboardButton("🏗️ Bajarilgan loyihalar")],
         [KeyboardButton("🌟 Keng qamrovlik yechim")],
-        [KeyboardButton("📋 Mening buyurtmalarim")],
+        [KeyboardButton("🛒 Savatim"), KeyboardButton("📋 Buyurtmalarim")],
     ]
     markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text(
@@ -80,19 +85,32 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user = update.effective_user
+    uid = user.id
 
-    if text == "📋 Mening buyurtmalarim":
-        uid = user.id
+    if text == "📋 Buyurtmalarim":
         if uid in orders and orders[uid]:
             msg = "Sizning buyurtmalaringiz:\n\n"
             for i, o in enumerate(orders[uid], 1):
-                msg += str(i) + ". " + o["category"] + "\n"
-                msg += "   Model: " + o.get("model", "Noma'lum") + "\n"
-                msg += "   Qoplama: " + o.get("qoplama", "Yo'q") + "\n"
-                msg += "   O'lcham: " + o.get("razmer", "Noma'lum") + "\n\n"
+                msg += str(i) + ". " + o["category"] + " — " + o.get("model", "") + "\n"
+                msg += "   O'lcham: " + o.get("olcham", "") + "\n\n"
         else:
             msg = "Hozircha buyurtma yo'q."
         await update.message.reply_text(msg)
+        return CHOOSING
+
+    if text == "🛒 Savatim":
+        if uid in savat and savat[uid]:
+            msg = "🛒 Savatingiz:\n\n"
+            for i, s in enumerate(savat[uid], 1):
+                msg += str(i) + ". " + s["category"] + " — " + s.get("model", "") + "\n"
+                msg += "   " + s.get("olcham", "") + "\n\n"
+            keyboard = [
+                [InlineKeyboardButton("✅ Buyurtma berish", callback_data="buyurtma_ber")],
+                [InlineKeyboardButton("🗑 Savatni tozalash", callback_data="savat_tozala")],
+            ]
+            await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
+        else:
+            await update.message.reply_text("Savat bo'sh. Mahsulot tanlang!")
         return CHOOSING
 
     if text == "📐 Loyiha bo'yicha hisoblash":
@@ -114,15 +132,14 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if text == "🏗️ Bajarilgan loyihalar":
         await update.message.reply_text(
-            "🏗️ Bajarilgan loyihalarni ko'rish uchun:\n\n"
+            "🏗️ Bajarilgan loyihalarni ko'rish:\n\n"
             "https://muzaffar57.github.io/-penodecor-katalog/loyihalar.html"
         )
         return CHOOSING
 
     if text == "🌟 Keng qamrovlik yechim":
         await update.message.reply_text(
-            "🌟 Keng qamrovlik yechim\n\n"
-            "Tayyor dizayn paketlari va detallar to'plamlari:\n\n"
+            "🌟 Keng qamrovlik yechim:\n\n"
             "https://muzaffar57.github.io/-penodecor-katalog/yechim.html"
         )
         return CHOOSING
@@ -143,12 +160,11 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
             model_buttons.append(row)
         model_buttons.append([InlineKeyboardButton("📷 O'z rasmimni yuboraman", callback_data="custom_photo")])
 
-        markup = InlineKeyboardMarkup(model_buttons)
         await update.message.reply_text(
             text + " katalogi:\n\n"
             "Katalogni ko'rish: " + link + "\n\n"
             "Yoqtirgan modelingizni tanlang:",
-            reply_markup=markup
+            reply_markup=InlineKeyboardMarkup(model_buttons)
         )
         return MODEL_SELECTION
 
@@ -159,75 +175,136 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    uid = query.from_user.id
+    category = context.user_data.get("category", "")
 
     if query.data.startswith("model_"):
         model = "MODEL-" + query.data.replace("model_", "")
         context.user_data["model"] = model
+
+        # Razmer kerakmi?
+        if category in RAZMER_KERAK:
+            if category == "Ustunlar":
+                buttons = [[InlineKeyboardButton(r, callback_data="razmer_" + r)] for r in USTUN_RAZMERLAR]
+            else:
+                buttons = [[InlineKeyboardButton(r, callback_data="razmer_" + r)] for r in KARNIZ_RAZMERLAR]
+            await query.message.reply_text(
+                model + " tanlandingiz!\n\nRazmer tanlang:",
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
+            return RAZMER_TANLOV
+
+        # Qoplama so'rash
         keyboard = [
             [InlineKeyboardButton("✅ Ha, qoplama bilan", callback_data="qoplama_ha")],
             [InlineKeyboardButton("❌ Yo'q, qoplama siz", callback_data="qoplama_yoq")],
         ]
         await query.message.reply_text(
-            "Siz " + model + " ni tanladingiz!\n\n"
-            "Qoplama tortilsinmi?",
+            model + " tanlandingiz!\n\nQoplama tortilsinmi?",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
         return QOPLAMA
+
+    if query.data.startswith("razmer_"):
+        razmer = query.data.replace("razmer_", "")
+        context.user_data["razmer"] = razmer
+
+        if razmer == "25sm dan katta — aloqaga chiqing":
+            await query.message.reply_text(
+                "Katta razmer uchun bizga murojaat qiling:\n\n"
+                "📞 Telefon: +998 XX XXX XX XX\n"
+                "📱 Telegram: @PenoDecorPro"
+            )
+            return CHOOSING
+
+        keyboard = [
+            [InlineKeyboardButton("✅ Ha, qoplama bilan", callback_data="qoplama_ha")],
+            [InlineKeyboardButton("❌ Yo'q, qoplama siz", callback_data="qoplama_yoq")],
+        ]
+        await query.message.reply_text(
+            "Razmer: " + razmer + "\n\nQoplama tortilsinmi?",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return QOPLAMA
+
+    if query.data in ["qoplama_ha", "qoplama_yoq"]:
+        context.user_data["qoplama"] = "Ha" if query.data == "qoplama_ha" else "Yo'q"
+        category = context.user_data.get("category", "")
+        shablon = OLCHAM_SHABLONLAR.get(category, "O'lchamlarni kiriting:")
+        await query.message.reply_text("📐 " + shablon)
+        return OLCHAM
 
     if query.data == "custom_photo":
         await query.message.reply_text("Namuna rasmingizni yuboring:")
         return CUSTOM_PHOTO
 
-    if query.data == "qoplama_ha":
-        context.user_data["qoplama"] = "Ha (x2 narx)"
-        await query.message.reply_text(OLCHAM_SHABLON)
-        return RAZMER
+    if query.data == "buyurtma_ber":
+        uid = query.from_user.id
+        user = query.from_user
+        if uid in savat and savat[uid]:
+            msg = "🆕 YANGI BUYURTMA!\n\n"
+            msg += "👤 Mijoz: " + user.first_name + " " + (user.last_name or "") + "\n"
+            msg += "🆔 ID: " + str(uid) + "\n\n"
+            msg += "🛒 Buyurtma tarkibi:\n\n"
+            for i, s in enumerate(savat[uid], 1):
+                msg += str(i) + ". " + s["category"] + " — " + s.get("model", "") + "\n"
+                msg += "   O'lcham: " + s.get("olcham", "") + "\n"
+                msg += "   Qoplama: " + s.get("qoplama", "") + "\n\n"
 
-    if query.data == "qoplama_yoq":
-        context.user_data["qoplama"] = "Yo'q"
-        await query.message.reply_text(OLCHAM_SHABLON)
-        return RAZMER
+            if ADMIN_ID:
+                await context.bot.send_message(chat_id=ADMIN_ID, text=msg)
+
+            if uid not in orders:
+                orders[uid] = []
+            orders[uid].extend(savat[uid])
+            savat[uid] = []
+
+            await query.message.reply_text(
+                "✅ Buyurtmangiz qabul qilindi!\n\n"
+                "Tez orada narxni hisoblab, sizga yuboramiz. Rahmat! 🙏"
+            )
+        return CHOOSING
+
+    if query.data == "savat_tozala":
+        savat[uid] = []
+        await query.message.reply_text("🗑 Savat tozalandi!")
+        return CHOOSING
 
     return CHOOSING
 
 
-async def razmer_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def olcham_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    razmer = update.message.text
+    uid = user.id
+    olcham = update.message.text
     category = context.user_data.get("category", "Noma'lum")
     model = context.user_data.get("model", "Noma'lum")
     qoplama = context.user_data.get("qoplama", "Yo'q")
+    razmer = context.user_data.get("razmer", "")
 
-    if user.id not in orders:
-        orders[user.id] = []
-    orders[user.id].append({
+    item = {
         "category": category,
         "model": model,
+        "qoplama": qoplama,
+        "olcham": olcham,
         "razmer": razmer,
-        "qoplama": qoplama
-    })
+    }
 
+    if uid not in savat:
+        savat[uid] = []
+    savat[uid].append(item)
+
+    keyboard = [
+        [InlineKeyboardButton("🛒 Savatni ko'rish", callback_data="savat_kor")],
+        [InlineKeyboardButton("➕ Yana mahsulot qo'shish", callback_data="yana_qosh")],
+    ]
     await update.message.reply_text(
-        "✅ Buyurtmangiz qabul qilindi!\n\n"
-        "Bo'lim: " + category + "\n"
-        "Model: " + model + "\n"
-        "Qoplama: " + qoplama + "\n"
-        "O'lcham:\n" + razmer + "\n\n"
-        "Tez orada narxni hisoblab, sizga yuboramiz. Rahmat! 🙏"
+        "✅ Savatga qo'shildi!\n\n"
+        "📦 " + category + " — " + model + "\n"
+        "📐 " + olcham + "\n"
+        "🖌 Qoplama: " + qoplama,
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
-
-    if ADMIN_ID:
-        msg = (
-            "🆕 YANGI BUYURTMA!\n\n"
-            "👤 Mijoz: " + user.first_name + " " + (user.last_name or "") + "\n"
-            "🆔 ID: " + str(user.id) + "\n"
-            "📦 Bo'lim: " + category + "\n"
-            "🎨 Model: " + model + "\n"
-            "🖌 Qoplama: " + qoplama + "\n"
-            "📐 O'lcham:\n" + razmer
-        )
-        await context.bot.send_message(chat_id=ADMIN_ID, text=msg)
-
     return CHOOSING
 
 
@@ -243,11 +320,9 @@ async def loyiha_photo_received(update: Update, context: ContextTypes.DEFAULT_TY
             await context.bot.send_photo(
                 chat_id=ADMIN_ID,
                 photo=photo.file_id,
-                caption=(
-                    "📐 LOYIHA BO'YICHA HISOBLASH!\n\n"
-                    "👤 Mijoz: " + user.first_name + " " + (user.last_name or "") + "\n"
-                    "🆔 ID: " + str(user.id)
-                )
+                caption="📐 LOYIHA BO'YICHA HISOBLASH!\n\n"
+                "👤 Mijoz: " + user.first_name + " " + (user.last_name or "") + "\n"
+                "🆔 ID: " + str(user.id)
             )
         return CHOOSING
     await update.message.reply_text("Iltimos, rasm yuboring.")
@@ -267,12 +342,10 @@ async def fasad_photo_received(update: Update, context: ContextTypes.DEFAULT_TYP
             await context.bot.send_photo(
                 chat_id=ADMIN_ID,
                 photo=photo.file_id,
-                caption=(
-                    "🏠 FASAD LOYIHASI TAYYORLASH!\n\n"
-                    "👤 Mijoz: " + user.first_name + " " + (user.last_name or "") + "\n"
-                    "🆔 ID: " + str(user.id) + "\n"
-                    "📝 Izoh: " + caption
-                )
+                caption="🏠 FASAD LOYIHASI!\n\n"
+                "👤 Mijoz: " + user.first_name + " " + (user.last_name or "") + "\n"
+                "🆔 ID: " + str(user.id) + "\n"
+                "📝 Izoh: " + caption
             )
         return CHOOSING
     await update.message.reply_text("Iltimos, fasad rasmini yuboring.")
@@ -297,7 +370,7 @@ async def custom_photo_received(update: Update, context: ContextTypes.DEFAULT_TY
             await context.bot.send_photo(
                 chat_id=ADMIN_ID,
                 photo=photo.file_id,
-                caption="📷 Yangi namuna rasmi!\n👤 Mijoz: " + user.first_name + "\n🆔 ID: " + str(user.id) + "\n📦 Bo'lim: " + cat
+                caption="📷 Yangi namuna rasmi!\n👤 " + user.first_name + "\n🆔 " + str(user.id) + "\n📦 " + cat
             )
         return QOPLAMA
     await update.message.reply_text("Iltimos, rasm yuboring.")
@@ -328,13 +401,17 @@ def main():
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
-            CHOOSING: [MessageHandler(filters.TEXT & ~filters.COMMAND, category_chosen)],
+            CHOOSING: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, category_chosen),
+                CallbackQueryHandler(button_handler),
+            ],
             MODEL_SELECTION: [
                 CallbackQueryHandler(button_handler),
                 MessageHandler(filters.PHOTO, custom_photo_received),
             ],
+            RAZMER_TANLOV: [CallbackQueryHandler(button_handler)],
             QOPLAMA: [CallbackQueryHandler(button_handler)],
-            RAZMER: [MessageHandler(filters.TEXT & ~filters.COMMAND, razmer_received)],
+            OLCHAM: [MessageHandler(filters.TEXT & ~filters.COMMAND, olcham_received)],
             LOYIHA_PHOTO: [MessageHandler(filters.PHOTO, loyiha_photo_received)],
             FASAD_PHOTO: [
                 MessageHandler(filters.PHOTO, fasad_photo_received),
