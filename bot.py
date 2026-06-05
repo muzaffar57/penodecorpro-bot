@@ -655,7 +655,7 @@ async def miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     savat[uid].append(item)
 
     keyboard = [
-        [InlineKeyboardButton("🛒 Savatni ko'rish va buyurtma berish", callback_data="buyurtma_ber")],
+        [InlineKeyboardButton("💰 Jami hisobni ko'rish (PDF)", callback_data="hisob_korsatish")],
         [InlineKeyboardButton("➕ Yana mahsulot qo'shish", callback_data="yana_qosh")],
     ]
 
@@ -689,7 +689,7 @@ async def olcham_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     savat[uid].append(item)
 
     keyboard = [
-        [InlineKeyboardButton("🛒 Savatni ko'rish va buyurtma berish", callback_data="buyurtma_ber")],
+        [InlineKeyboardButton("💰 Jami hisobni ko'rish (PDF)", callback_data="hisob_korsatish")],
         [InlineKeyboardButton("➕ Yana mahsulot qo'shish", callback_data="yana_qosh")],
     ]
 
