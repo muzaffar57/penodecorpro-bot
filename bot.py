@@ -452,6 +452,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         reply_markup=InlineKeyboardMarkup(kb2)
                     )
                     return RAZMER_TANLOV
+                elif category in ["Barelef gullar", "Kalvak", "Shohona karnizlar"]:
+                    context.user_data["qoplama"] = "Yo'q"
+                    keyboard_aloqa = [
+                        [InlineKeyboardButton("📞 Boshqa razmer — aloqaga chiqing", url="https://t.me/penodecorprobot")]
+                    ]
+                    await update.message.reply_text(
+                        model + " tanlandingiz!\n\n"
+                        "ℹ️ Bu mahsulotlar qoplamasiz holatda taqdim etiladi.\n\n"
+                        "Necha dona kerak?\nFaqat raqam yozing:\nMasalan: 4",
+                        reply_markup=InlineKeyboardMarkup(keyboard_aloqa)
+                    )
+                    return OLCHAM
                 else:
                     await update.message.reply_text(
                         model + " tanlandi!\n\nQoplama tortilsinmi?\n\n"
@@ -657,11 +669,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Qoplama so'ralmaydigan bo'limlar
         if category in ["Barelef gullar", "Kalvak", "Shohona karnizlar"]:
             context.user_data["qoplama"] = "Yo'q"
+            keyboard_aloqa = [
+                [InlineKeyboardButton("📞 Boshqa razmer — aloqaga chiqing", url="https://t.me/penodecorprobot")]
+            ]
             await query.message.reply_text(
                 model + " tanlandingiz!\n\n"
                 "ℹ️ Bu mahsulotlar qoplamasiz holatda taqdim etiladi.\n\n"
-                "Necha dona kerak?\nFaqat raqam yozing:\nMasalan: 4\n\n"
-                "📞 Boshqa razmer kerak bo'lsa — bizga aloqaga chiqing!"
+                "Necha dona kerak?\nFaqat raqam yozing:\nMasalan: 4",
+                reply_markup=InlineKeyboardMarkup(keyboard_aloqa)
             )
             return OLCHAM
 
