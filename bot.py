@@ -524,12 +524,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if category == "Rom bezaklari":
             keyboard = [
-                [InlineKeyboardButton("🪟 Rom bezak", callback_data="romtur_rom")],
-                [InlineKeyboardButton("🚪 Eshik bezak", callback_data="romtur_eshik")],
+                [InlineKeyboardButton("Katta razmer", callback_data="razmer_Katta_razmer")],
+                [InlineKeyboardButton("Kichik razmer", callback_data="razmer_Kichik_razmer")],
                 [InlineKeyboardButton("🔙 Orqaga", callback_data="orqaga_model")],
             ]
-            await query.message.reply_text(model + " tanlandingiz!\n\nQaysi tur kerak?", reply_markup=InlineKeyboardMarkup(keyboard))
-            return ROM_TUR
+            await query.message.reply_text(
+                model + " tanlandingiz!\n\nRazmer tanlang:",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+            return RAZMER_TANLOV
 
         if category in ["Karnizlar", "Belbog' karnizlar"]:
             buttons = [[InlineKeyboardButton(r, callback_data="razmer_" + r.replace(" ", "_"))] for r in KARNIZ_RAZMERLAR]
@@ -672,7 +675,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return MODEL_SELECTION
 
     if query.data == "kapitel_ha":
-        razmer = context.user_data.get("razmer", "25sm")
         await query.message.reply_text(
             "Necha dona KAPITEL kerak?\n"
             "Faqat raqam yozing:\nMasalan: 4"
@@ -1078,26 +1080,12 @@ async def miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if category == "Ustunlar":
         keyboard2 = [
-            [InlineKeyboardButton("✅ Ha, qo'shish kerak", callback_data="kapitel_ha")],
+            [InlineKeyboardButton("✅ Ha, kerak", callback_data="kapitel_ha")],
             [InlineKeyboardButton("❌ Yo'q, kerak emas", callback_data="kapitel_yoq")],
         ]
         await update.message.reply_text(msg)
         await update.message.reply_text(
-            "Kapitel va baza qo'shish kerakmi?\n\n"
-            "💰 Kapitel narxlari (qoplama bilan):\n"
-            "En 25sm — 14,000 so'm/dona\n"
-            "En 30sm — 16,000 so'm/dona\n"
-            "En 35sm — 18,000 so'm/dona\n"
-            "En 40sm — 20,000 so'm/dona\n"
-            "En 45sm — 22,000 so'm/dona\n"
-            "En 50sm — 24,000 so'm/dona\n\n"
-            "💰 Baza narxlari (qoplama bilan):\n"
-            "En 25sm — 12,000 so'm/dona\n"
-            "En 30sm — 14,000 so'm/dona\n"
-            "En 35sm — 16,000 so'm/dona\n"
-            "En 40sm — 18,000 so'm/dona\n"
-            "En 45sm — 20,000 so'm/dona\n"
-            "En 50sm — 22,000 so'm/dona",
+            "Kapitel va baza ham qo'shish kerakmi?",
             reply_markup=InlineKeyboardMarkup(keyboard2)
         )
         return KAPITEL_SONI
