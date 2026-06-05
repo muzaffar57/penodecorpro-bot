@@ -411,6 +411,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             category = bolim_map.get(bolim_kod)
             if category and model.startswith("MODEL"):
+                model = model.replace("_", "-")  # MODEL_06 → MODEL-06
                 context.user_data["category"] = category
                 context.user_data["model"] = model
 
