@@ -280,8 +280,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         tur = "Rom bezak" if query.data == "romtur_rom" else "Eshik bezak"
         context.user_data["rom_tur"] = tur
         keyboard = [
-            [InlineKeyboardButton("Katta razmer", callback_data="razmer_Katta razmer")],
-            [InlineKeyboardButton("Kichik razmer", callback_data="razmer_Kichik razmer")],
+            [InlineKeyboardButton("Katta razmer", callback_data="razmer_Katta_razmer")],
+            [InlineKeyboardButton("Kichik razmer", callback_data="razmer_Kichik_razmer")],
         ]
         await query.message.reply_text(
             tur + " tanlandi!\n\nRazmer tanlang:",
@@ -290,7 +290,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return RAZMER_TANLOV
 
     if query.data.startswith("razmer_"):
-        razmer = query.data.replace("razmer_", "")
+        razmer = query.data.replace("razmer_", "").replace("_", " ")
         context.user_data["razmer"] = razmer
 
         if razmer == "25sm dan katta":
