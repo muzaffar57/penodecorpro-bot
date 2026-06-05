@@ -132,12 +132,21 @@ def create_pdf_bytes(mijoz_ism, savat_items):
         canvas_obj.setFillColor(colors.HexColor("#1A252F"))
         canvas_obj.rect(0, h - 3.5*cm, w, 3.5*cm, fill=1, stroke=0)
 
-        # Logo doira
-        canvas_obj.setFillColor(colors.HexColor("#E74C3C"))
-        canvas_obj.circle(3*cm, h - 1.75*cm, 1.1*cm, fill=1, stroke=0)
-        canvas_obj.setFillColor(colors.white)
-        canvas_obj.setFont("Helvetica-Bold", 22)
-        canvas_obj.drawCentredString(3*cm, h - 2.1*cm, "P")
+        # Logo rasm
+        try:
+            import urllib.request
+            from reportlab.lib.utils import ImageReader
+            logo_url = "https://muzaffar57.github.io/-penodecor-katalog/LOGO.jpg"
+            logo_data = urllib.request.urlopen(logo_url, timeout=5).read()
+            logo_img = ImageReader(io.BytesIO(logo_data))
+            canvas_obj.drawImage(logo_img, 1.5*cm, h - 3.2*cm, width=2.2*cm, height=2.2*cm, preserveAspectRatio=True, mask='auto')
+        except:
+            # Logo yuklanmasa qizil doira chiqsin
+            canvas_obj.setFillColor(colors.HexColor("#E74C3C"))
+            canvas_obj.circle(3*cm, h - 1.75*cm, 1.1*cm, fill=1, stroke=0)
+            canvas_obj.setFillColor(colors.white)
+            canvas_obj.setFont("Helvetica-Bold", 22)
+            canvas_obj.drawCentredString(3*cm, h - 2.1*cm, "P")
 
         # Kompaniya nomi
         canvas_obj.setFillColor(colors.white)
