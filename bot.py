@@ -782,7 +782,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["qoplama"] = "Ha" if query.data == "qoplama_ha" else "Yo'q"
         category = context.user_data.get("category", "")
         if category == "Rom bezaklari":
-            await query.message.reply_text("Nechta ROM kerak?\n\nFaqat raqam yozing:\nMasalan: 8")
+            await query.message.reply_text("🪟 Nechta ROM kerak?\n\nFaqat raqam yozing:\nMasalan: 8")
             return ROM_SONI
         elif category in MIQDOR_SHABLONLAR:
             await query.message.reply_text("📐 " + MIQDOR_SHABLONLAR[category])
@@ -1087,7 +1087,7 @@ async def rom_soni_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
         soni = int(text)
         context.user_data["rom_soni"] = soni
         await update.message.reply_text(
-            "Nechta ESHIK kerak?\n\nFaqat raqam yozing:\nMasalan: 4"
+            "🚪 Nechta ESHIK kerak?\n\nFaqat raqam yozing:\nMasalan: 4"
         )
         return ESHIK_SONI
     except:
