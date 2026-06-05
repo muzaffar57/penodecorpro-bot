@@ -363,18 +363,18 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "🛒 Savatim":
         if uid in savat and savat[uid]:
             msg = "🛒 Savatingiz:\n\n"
-            jami = 0
             for i, s in enumerate(savat[uid], 1):
                 msg += str(i) + ". " + s["category"] + " — " + s.get("model", "") + "\n"
+                if s.get("rom_tur"):
+                    msg += "   Tur: " + s["rom_tur"] + "\n"
                 if s.get("razmer"):
                     msg += "   Razmer: " + s["razmer"] + "\n"
                 msg += "   Qoplama: " + s.get("qoplama", "") + "\n"
-                if s.get("jami_narx"):
-                    msg += "   Jami: " + format_narx(s["jami_narx"]) + "\n"
-                    jami += s["jami_narx"]
+                if s.get("miqdor_text"):
+                    msg += "   Miqdor: " + s["miqdor_text"] + "\n"
                 msg += "\n"
-            if jami:
-                msg += "━━━━━━━━━━━━━━\n💰 UMUMIY JAMI: " + format_narx(jami)
+            msg += "━━━━━━━━━━━━━━\n"
+            msg += "💰 Jami hisobni ko'rish uchun tugmani bosing:"
             keyboard = [
                 [InlineKeyboardButton("💰 Jami hisobni ko'rish (PDF)", callback_data="hisob_korsatish")],
                 [InlineKeyboardButton("🗑 Savatni tozalash", callback_data="savat_tozala")],
