@@ -321,6 +321,12 @@ KARNIZ_RAZMER_MAP = {
     "17sm": "Kichik (17sm)",
     "20sm": "Ortacha (20sm)",
     "25sm": "Katta (25sm)",
+    "Kichik 17sm": "Kichik (17sm)",
+    "Ortacha 20sm": "Ortacha (20sm)",
+    "Katta 25sm": "Katta (25sm)",
+    "Kichik (17sm)": "Kichik (17sm)",
+    "Ortacha (20sm)": "Ortacha (20sm)",
+    "Katta (25sm)": "Katta (25sm)",
 }
 
 MIQDOR_SHABLONLAR = {
@@ -432,7 +438,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
                     return RAZMER_TANLOV
                 elif category in ["Karnizlar", "Belbog' karnizlar"]:
-                    kb2 = [[InlineKeyboardButton(r, callback_data="razmer_" + r.replace(" ", "_"))] for r in KARNIZ_RAZMERLAR]
+                    kb2 = [[InlineKeyboardButton(r, callback_data="razmer_" + r.replace(" ", "_").replace("(","").replace(")",""))] for r in KARNIZ_RAZMERLAR]
                     await update.message.reply_text(
                         model + " — Razmer tanlang:",
                         reply_markup=InlineKeyboardMarkup(kb2)
