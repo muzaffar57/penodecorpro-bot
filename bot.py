@@ -20,7 +20,12 @@ SHEET_IDS = {
 }
 
 def get_gspread_client():
-    creds_json = os.environ.get("GOOGLE_CREDENTIALS")
+    import base64
+    creds_b64 = os.environ.get("GOOGLE_CREDENTIALS_B64")
+    if creds_b64:
+        creds_json = base64.b64decode(creds_b64).decode("utf-8")
+    else:
+        creds_json = os.environ.get("GOOGLE_CREDENTIALS")
     creds_dict = json.loads(creds_json)
     scopes = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
