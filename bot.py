@@ -1471,7 +1471,10 @@ def main():
     init_db()
     app = Application.builder().token(TOKEN).build()
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
+        entry_points=[
+            CommandHandler("start", start),
+            CommandHandler("send_all", send_all_cmd),
+        ],
         states={
             CHOOSING: [MessageHandler(filters.TEXT & ~filters.COMMAND, category_chosen), CallbackQueryHandler(button_handler)],
             MODEL_SELECTION: [CallbackQueryHandler(button_handler), MessageHandler(filters.PHOTO, custom_photo_received)],
