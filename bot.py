@@ -416,6 +416,7 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if row:
             model_buttons.append(row)
         model_buttons.append([InlineKeyboardButton("📷 O'z rasmimni yuboraman", callback_data="custom_photo")])
+        model_buttons.append([InlineKeyboardButton("🔙 Orqaga", callback_data="orqaga_start")])
         await update.message.reply_text(
             text + " katalogi:\n\nKatalogni ko'rish: " + link + "\n\nYoqtirgan modelingizni tanlang:",
             reply_markup=InlineKeyboardMarkup(model_buttons)
@@ -440,23 +441,27 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard = [
                 [InlineKeyboardButton("🪟 Rom bezak", callback_data="romtur_rom")],
                 [InlineKeyboardButton("🚪 Eshik bezak", callback_data="romtur_eshik")],
+                [InlineKeyboardButton("🔙 Orqaga", callback_data="orqaga_model")],
             ]
             await query.message.reply_text(model + " tanlandingiz!\n\nQaysi tur kerak?", reply_markup=InlineKeyboardMarkup(keyboard))
             return ROM_TUR
 
         if category in ["Karnizlar", "Belbog' karnizlar"]:
             buttons = [[InlineKeyboardButton(r, callback_data="razmer_" + r.replace(" ", "_").replace("(", "").replace(")", ""))] for r in KARNIZ_RAZMERLAR]
+            buttons.append([InlineKeyboardButton("🔙 Orqaga", callback_data="orqaga_model")])
             await query.message.reply_text(model + " tanlandingiz!\n\nRazmer tanlang:", reply_markup=InlineKeyboardMarkup(buttons))
             return RAZMER_TANLOV
 
         if category == "Ustunlar":
             buttons = [[InlineKeyboardButton(r, callback_data="razmer_" + r)] for r in USTUN_RAZMERLAR]
+            buttons.append([InlineKeyboardButton("🔙 Orqaga", callback_data="orqaga_model")])
             await query.message.reply_text(model + " tanlandingiz!\n\nRazmer tanlang:", reply_markup=InlineKeyboardMarkup(buttons))
             return RAZMER_TANLOV
 
         keyboard = [
             [InlineKeyboardButton("✅ Ha, qoplama bilan", callback_data="qoplama_ha")],
             [InlineKeyboardButton("❌ Yo'q, qoplama siz", callback_data="qoplama_yoq")],
+            [InlineKeyboardButton("🔙 Orqaga", callback_data="orqaga_model")],
         ]
         await query.message.reply_text(model + " tanlandingiz!\n\nQoplama tortilsinmi?", reply_markup=InlineKeyboardMarkup(keyboard))
         return QOPLAMA
@@ -467,6 +472,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [InlineKeyboardButton("Katta razmer", callback_data="razmer_Katta_razmer")],
             [InlineKeyboardButton("Kichik razmer", callback_data="razmer_Kichik_razmer")],
+            [InlineKeyboardButton("🔙 Orqaga", callback_data="orqaga_model")],
         ]
         await query.message.reply_text(tur + " tanlandi!\n\nRazmer tanlang:", reply_markup=InlineKeyboardMarkup(keyboard))
         return RAZMER_TANLOV
@@ -498,6 +504,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [InlineKeyboardButton("✅ Ha, qoplama bilan", callback_data="qoplama_ha")],
             [InlineKeyboardButton("❌ Yo'q, qoplama siz", callback_data="qoplama_yoq")],
+            [InlineKeyboardButton("🔙 Orqaga", callback_data="orqaga_model")],
         ]
         await query.message.reply_text("Razmer: " + razmer + "\n\nQoplama tortilsinmi?", reply_markup=InlineKeyboardMarkup(keyboard))
         return QOPLAMA
@@ -594,6 +601,34 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.message.reply_text("Xato: " + str(e))
         return CHOOSING
 
+    if query.data == "orqaga_start":
+        # Kategoriya tanlash menyusiga qaytish
+        await query.message.reply_text("Bosh menyuga qaytdingiz. Bo'lim tanlang:")
+        return CHOOSING
+
+    if query.data == "orqaga_model":
+        # Model tanlashga qaytish
+        category = context.user_data.get("category", "")
+        if category in KATALOG_LINKS:
+            count = KATALOG_COUNTS.get(category, 16)
+            link = KATALOG_LINKS[category]
+            row = []
+            model_buttons = []
+            for i in range(1, count + 1):
+                row.append(InlineKeyboardButton("MODEL-" + str(i).zfill(2), callback_data="model_" + str(i).zfill(2)))
+                if len(row) == 4:
+                    model_buttons.append(row)
+                    row = []
+            if row:
+                model_buttons.append(row)
+            model_buttons.append([InlineKeyboardButton("📷 O'z rasmimni yuboraman", callback_data="custom_photo")])
+            model_buttons.append([InlineKeyboardButton("🔙 Orqaga", callback_data="orqaga_start")])
+            await query.message.reply_text(
+                category + " katalogi:\n\nKatalogni ko'rish: " + link + "\n\nModelni tanlang:",
+                reply_markup=InlineKeyboardMarkup(model_buttons)
+            )
+        return MODEL_SELECTION
+
     if query.data == "savat_tozala":
         savat[uid] = []
         await query.message.reply_text("🗑 Savat tozalandi!")
@@ -618,6 +653,9 @@ async def miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         import re
+        if uid not in savat:
+            savat[uid] = []
+
         if category == "Rom bezaklari":
             rom_soni = 0
             eshik_soni = 0
@@ -630,29 +668,41 @@ async def miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             rom_narx = get_birlik_narx(category, model, razmer, "Rom bezak", qoplama) or 0
             eshik_narx = get_birlik_narx(category, model, razmer, "Eshik bezak", qoplama) or 0
+
+            # Rom va eshikni ALOHIDA savatga qo'shish
+            if rom_soni > 0:
+                savat[uid].append({
+                    "category": "Rom bezaklari", "model": model,
+                    "rom_tur": "Rom bezak", "qoplama": qoplama, "razmer": razmer,
+                    "miqdor_text": str(rom_soni) + " ta dona",
+                    "jami_narx": rom_soni * rom_narx, "birlik_narx": rom_narx,
+                })
+            if eshik_soni > 0:
+                savat[uid].append({
+                    "category": "Rom bezaklari", "model": model,
+                    "rom_tur": "Eshik bezak", "qoplama": qoplama, "razmer": razmer,
+                    "miqdor_text": str(eshik_soni) + " ta dona",
+                    "jami_narx": eshik_soni * eshik_narx, "birlik_narx": eshik_narx,
+                })
+
             jami_narx = rom_soni * rom_narx + eshik_soni * eshik_narx
             miqdor_text = str(rom_soni) + " ta rom, " + str(eshik_soni) + " ta eshik"
-            birlik_narx = rom_narx
 
-        elif category in ["Ustunlar", "Karnizlar", "Belbog' karnizlar"]:
+        else:
             metr_match = re.search(r'(\d+[\.,]?\d*)', text)
             if metr_match:
                 metr = float(metr_match.group(1).replace(",", "."))
                 birlik_narx = get_birlik_narx(category, model, razmer, None, qoplama) or 0
                 jami_narx = int(metr * birlik_narx)
                 miqdor_text = str(metr) + " metr"
+                savat[uid].append({
+                    "category": category, "model": model, "rom_tur": "",
+                    "qoplama": qoplama, "razmer": razmer,
+                    "miqdor_text": miqdor_text, "jami_narx": jami_narx, "birlik_narx": birlik_narx,
+                })
+
     except Exception as e:
         logger.error("Miqdor xato: " + str(e))
-
-    item = {
-        "category": category, "model": model, "rom_tur": rom_tur,
-        "qoplama": qoplama, "razmer": razmer,
-        "miqdor_text": miqdor_text, "jami_narx": jami_narx, "birlik_narx": birlik_narx,
-    }
-
-    if uid not in savat:
-        savat[uid] = []
-    savat[uid].append(item)
 
     keyboard = [
         [InlineKeyboardButton("💰 Jami hisobni ko'rish (PDF)", callback_data="hisob_korsatish")],
@@ -664,7 +714,9 @@ async def miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if razmer:
         msg += "📏 Razmer: " + razmer + "\n"
     msg += "🖌 Qoplama: " + qoplama + "\n"
-    msg += "📐 Miqdor: " + miqdor_text
+    msg += "📐 Miqdor: " + miqdor_text + "\n"
+    if jami_narx:
+        msg += "💰 Jami: " + format_narx(jami_narx)
 
     await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
     return CHOOSING
