@@ -101,7 +101,7 @@ BELBOG_NARXLAR = {
     "MODEL-28": {"Kichik (17sm)": 13000, "Ortacha (20sm)": 20000, "Katta (25sm)": 30000},
 }
 
-from sheets_narx import narx_ol, narxlarni_yangilash
+from sheets_narx import narx_ol, narxlarni_yangilash, chegirma_ol
 
 def get_birlik_narx(category, model, razmer, tur=None, qoplama="Ha"):
     narx = None
@@ -125,8 +125,15 @@ def get_birlik_narx(category, model, razmer, tur=None, qoplama="Ha"):
             narx = narx_ol(f"Ramka_{num}") or RAMKA_NARXLAR.get(model)
     except:
         return None
-    if narx and qoplama == "Yo'q":
-        narx = narx // 2
+
+    if narx:
+        # Chegirma qo'llash
+        chegirma = chegirma_ol()
+        if chegirma > 0:
+            narx = int(narx * (100 - chegirma) / 100)
+        # Qoplama
+        if qoplama == "Yo'q":
+            narx = narx // 2
     return narx
 
 def format_narx(narx):
