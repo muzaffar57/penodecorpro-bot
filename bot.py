@@ -1222,7 +1222,10 @@ def main():
             KAPITEL_SONI: [MessageHandler(filters.TEXT & ~filters.COMMAND, kapitel_soni_received), CallbackQueryHandler(button_handler)],
             BAZA_SONI: [MessageHandler(filters.TEXT & ~filters.COMMAND, baza_soni_received)],
         },
-        fallbacks=[CommandHandler("start", start)],
+        fallbacks=[
+            CommandHandler("start", start),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, category_chosen),
+        ],
     )
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler("narx", send_price))
