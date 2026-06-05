@@ -101,19 +101,28 @@ BELBOG_NARXLAR = {
     "MODEL-28": {"Kichik (17sm)": 13000, "Ortacha (20sm)": 20000, "Katta (25sm)": 30000},
 }
 
+from sheets_narx import narx_ol, narxlarni_yangilash
+
 def get_birlik_narx(category, model, razmer, tur=None, qoplama="Ha"):
     narx = None
+    num = model.replace("MODEL-", "")
     try:
         if category == "Rom bezaklari":
-            narx = ROM_NARXLAR[model][tur][razmer]
+            tur_key = "Rom_katta" if tur == "Rom bezak" and razmer == "Katta razmer" else \
+                      "Rom_kichik" if tur == "Rom bezak" and razmer == "Kichik razmer" else \
+                      "Eshik_katta" if tur == "Eshik bezak" and razmer == "Katta razmer" else \
+                      "Eshik_kichik"
+            narx = narx_ol(f"Rom_{num}_{tur_key}") or ROM_NARXLAR[model][tur][razmer]
         elif category == "Ustunlar":
-            narx = USTUN_NARXLAR.get(razmer)
+            narx = narx_ol(f"Ustun_{razmer}") or USTUN_NARXLAR.get(razmer)
         elif category == "Karnizlar":
-            narx = KARNIZ_NARXLAR[model][razmer]
+            r = razmer.replace("Kichik (", "").replace("Ortacha (", "").replace("Katta (", "").replace(")", "")
+            narx = narx_ol(f"Karniz_{num}_{r}") or KARNIZ_NARXLAR[model][razmer]
         elif category == "Belbog' karnizlar":
-            narx = BELBOG_NARXLAR[model][razmer]
+            r = razmer.replace("Kichik (", "").replace("Ortacha (", "").replace("Katta (", "").replace(")", "")
+            narx = narx_ol(f"Belbog_{num}_{r}") or BELBOG_NARXLAR[model][razmer]
         elif category == "Devorga ramkalar":
-            narx = RAMKA_NARXLAR.get(model)
+            narx = narx_ol(f"Ramka_{num}") or RAMKA_NARXLAR.get(model)
     except:
         return None
     if narx and qoplama == "Yo'q":
@@ -969,7 +978,7 @@ async def kapitel_soni_received(update: Update, context: ContextTypes.DEFAULT_TY
         soni = int(text)
         context.user_data["kapitel_soni"] = soni
         razmer = context.user_data.get("razmer", "25sm")
-        narx = KAPITEL_NARXLAR.get(razmer, 14000)
+        narx = narx_ol(f"Kapitel_{razmer}") or KAPITEL_NARXLAR.get(razmer, 14000)
         qoplama = context.user_data.get("qoplama", "Ha")
         if qoplama == "Yo'q":
             narx = narx // 2
@@ -1005,7 +1014,7 @@ async def baza_soni_received(update: Update, context: ContextTypes.DEFAULT_TYPE)
     try:
         soni = int(text)
         razmer = context.user_data.get("razmer", "25sm")
-        narx = BAZA_NARXLAR.get(razmer, 12000)
+        narx = narx_ol(f"Baza_{razmer}") or BAZA_NARXLAR.get(razmer, 12000)
         qoplama = context.user_data.get("qoplama", "Ha")
         if qoplama == "Yo'q":
             narx = narx // 2
@@ -1360,6 +1369,13 @@ async def custom_photo_received(update: Update, context: ContextTypes.DEFAULT_TY
     return CUSTOM_PHOTO
 
 
+async def narx_yangilash_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
+    soni = narxlarni_yangilash()
+    await update.message.reply_text(f"✅ {soni} ta narx Google Sheets dan yangilandi!")
+
+
 async def send_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
@@ -1406,6 +1422,7 @@ def main():
     )
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler("narx", send_price))
+    app.add_handler(CommandHandler("narx_yangilash", narx_yangilash_cmd))
     app.run_polling()
 
 
