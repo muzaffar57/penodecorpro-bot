@@ -457,6 +457,23 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["category"] = text
         count = KATALOG_COUNTS.get(text, 16)
         link = KATALOG_LINKS[text]
+
+        # Rom bezaklari uchun tushuntirish
+        if text == "Rom bezaklari":
+            await update.message.reply_text(
+                "🪟 ROM VA ESHIK BEZAKLARI\n\n"
+                "Bizda ikki xil razmer mavjud:\n\n"
+                "📐 KATTA RAZMER:\n"
+                "• Rom karnizi: 17-18 sm\n"
+                "• Ikki yondagi nalichnik: 15 sm\n"
+                "• Podkolnik: 17 sm\n\n"
+                "📏 KICHIK RAZMER:\n"
+                "• Rom karnizi: 15 sm\n"
+                "• Ikki yondagi nalichnik: 12 sm\n"
+                "• Podkolnik: 14-15 sm\n\n"
+                "💡 Narx farqi ana shu o'lchamlar tufayli yuzaga keladi — katta razmer ko'proq material talab qiladi.\n\n"
+                "Quyida modelni tanlang 👇"
+            )
         row = []
         model_buttons = []
         for i in range(1, count + 1):
