@@ -505,7 +505,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("❌ Yo'q, qoplama siz", callback_data="qoplama_yoq")],
             [InlineKeyboardButton("🔙 Orqaga", callback_data="orqaga_model")],
         ]
-        await query.message.reply_text(model + " tanlandingiz!\n\nQoplama tortilsinmi?", reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.message.reply_text(
+            model + " tanlandingiz!\n\n"
+            "🖌 Qoplama tortilsinmi?\n\n"
+            "ℹ️ Katalogdagi narxlar qoplama bilan hisoblangan.\n"
+            "Qoplama shart bo'lmasa — narx 2 barobar arzonlashadi!",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
         return QOPLAMA
 
     if query.data.startswith("romtur_"):
@@ -535,7 +541,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("❌ Yo'q, qoplama siz", callback_data="qoplama_yoq")],
             [InlineKeyboardButton("🔙 Orqaga", callback_data="orqaga_model")],
         ]
-        await query.message.reply_text("Razmer: " + razmer + "\n\nQoplama tortilsinmi?", reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.message.reply_text(
+            "Razmer: " + razmer + "\n\n"
+            "🖌 Qoplama tortilsinmi?\n\n"
+            "ℹ️ Katalogdagi narxlar qoplama bilan hisoblangan.\n"
+            "Qoplama shart bo'lmasa — narx 2 barobar arzonlashadi!",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
         return QOPLAMA
 
     if query.data in ["qoplama_ha", "qoplama_yoq"]:
@@ -615,6 +627,34 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=InlineKeyboardMarkup(model_buttons)
             )
         return MODEL_SELECTION
+
+    if query.data == "yana_qosh":
+        category = context.user_data.get("category", "")
+        if category in KATALOG_LINKS:
+            count = KATALOG_COUNTS.get(category, 16)
+            link = KATALOG_LINKS[category]
+            row = []
+            model_buttons = []
+            for i in range(1, count + 1):
+                row.append(InlineKeyboardButton("MODEL-" + str(i).zfill(2), callback_data="model_" + str(i).zfill(2)))
+                if len(row) == 4:
+                    model_buttons.append(row)
+                    row = []
+            if row:
+                model_buttons.append(row)
+            model_buttons.append([InlineKeyboardButton("📷 O'z rasmimni yuboraman", callback_data="custom_photo")])
+            model_buttons.append([InlineKeyboardButton("🔙 Bosh menyu", callback_data="orqaga_start")])
+            await query.message.reply_text(
+                category + " katalogi:\n\nKatalogni ko'rish: " + link + "\n\nModelni tanlang:",
+                reply_markup=InlineKeyboardMarkup(model_buttons)
+            )
+        else:
+            # Bosh menyuni ko'rsat
+            await query.message.reply_text(
+                "Bo'lim tanlang:\n\n"
+                "Pastdagi menyudan kerakli bo'limni bosing 👇"
+            )
+        return CHOOSING
 
     if query.data == "savatim_kor":
         if uid in savat and savat[uid]:
@@ -713,8 +753,7 @@ async def tahrir_miqdor_received(update: Update, context: ContextTypes.DEFAULT_T
         await update.message.reply_text(
             "✅ Yangilandi!\n\n" +
             category + " — " + model + "\n" +
-            "Yangi miqdor: " + savat[uid][idx]["miqdor_text"] + "\n" +
-            "Jami: " + format_narx(yangi_jami)
+            "Yangi miqdor: " + savat[uid][idx]["miqdor_text"]
         )
     except:
         await update.message.reply_text("Iltimos, faqat raqam yozing!")
