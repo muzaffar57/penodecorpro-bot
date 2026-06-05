@@ -102,6 +102,7 @@ BELBOG_NARXLAR = {
 }
 
 from sheets_narx import narx_ol, narxlarni_yangilash, chegirma_ol
+from database import init_db, foydalanuvchi_qoshish, barcha_userlar, foydalanuvchilar_soni
 
 def get_birlik_narx(category, model, razmer, tur=None, qoplama="Ha"):
     narx = None
@@ -380,7 +381,7 @@ BAZA_NARXLAR = {
     "40sm": 18000, "45sm": 20000, "50sm": 22000,
 }
 
-CHOOSING, MODEL_SELECTION, QOPLAMA, RAZMER_TANLOV, ROM_TUR, ROM_SONI, ESHIK_SONI, MIQDOR, OLCHAM, LOYIHA_PHOTO, FASAD_PHOTO, CUSTOM_PHOTO, KONTAKT_ISM, KONTAKT_TEL, TAHRIR_MIQDOR, KAPITEL_SONI, BAZA_SONI = range(17)
+CHOOSING, MODEL_SELECTION, QOPLAMA, RAZMER_TANLOV, ROM_TUR, ROM_SONI, ESHIK_SONI, MIQDOR, OLCHAM, LOYIHA_PHOTO, FASAD_PHOTO, CUSTOM_PHOTO, KONTAKT_ISM, KONTAKT_TEL, TAHRIR_MIQDOR, KAPITEL_SONI, BAZA_SONI, RASSILKA = range(18)
 
 orders = {}
 savat = {}
@@ -388,6 +389,8 @@ savat = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    # Bazaga qo'shish
+    foydalanuvchi_qoshish(user.id, user.first_name, user.username or "")
     keyboard = [
         [KeyboardButton("📐 Mahsulotlar (Katalog)")],
         [KeyboardButton("🧮 Loyiha bo'yicha hisoblash")],
@@ -1376,6 +1379,71 @@ async def custom_photo_received(update: Update, context: ContextTypes.DEFAULT_TY
     return CUSTOM_PHOTO
 
 
+async def send_all_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin rassilka boshlaydi."""
+    if update.effective_user.id != ADMIN_ID:
+        return
+    soni = foydalanuvchilar_soni()
+    await update.message.reply_text(
+        f"📢 Rassilka rejimi\n\n"
+        f"Hozir bazada {soni} ta foydalanuvchi bor.\n\n"
+        f"Yubormoqchi bo'lgan xabaringizni kiriting:\n"
+        f"(Matn, rasm yoki video bo'lishi mumkin)"
+    )
+    return RASSILKA
+
+
+async def rassilka_yuborish(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Xabarni barcha foydalanuvchilarga yuborish."""
+    if update.effective_user.id != ADMIN_ID:
+        return CHOOSING
+
+    userlar = barcha_userlar()
+    if not userlar:
+        await update.message.reply_text("❌ Bazada foydalanuvchi yo'q!")
+        return CHOOSING
+
+    await update.message.reply_text(f"⏳ {len(userlar)} ta foydalanuvchiga yuborilmoqda...")
+
+    muvaffaqiyat = 0
+    xato = 0
+
+    for user_id in userlar:
+        try:
+            if update.message.photo:
+                # Rasm
+                await context.bot.send_photo(
+                    chat_id=user_id,
+                    photo=update.message.photo[-1].file_id,
+                    caption=update.message.caption or ""
+                )
+            elif update.message.video:
+                # Video
+                await context.bot.send_video(
+                    chat_id=user_id,
+                    video=update.message.video.file_id,
+                    caption=update.message.caption or ""
+                )
+            elif update.message.text:
+                # Matn
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=update.message.text
+                )
+            muvaffaqiyat += 1
+        except Exception as e:
+            logger.warning(f"User {user_id} ga yuborib bo'lmadi: {e}")
+            xato += 1
+
+    await update.message.reply_text(
+        f"✅ Rassilka tugadi!\n\n"
+        f"✓ Muvaffaqiyatli: {muvaffaqiyat} ta\n"
+        f"✗ Bloklaganlar: {xato} ta\n"
+        f"📊 Jami: {len(userlar)} ta"
+    )
+    return CHOOSING
+
+
 async def narx_yangilash_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
@@ -1400,6 +1468,7 @@ async def send_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def main():
+    init_db()
     app = Application.builder().token(TOKEN).build()
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
@@ -1421,6 +1490,11 @@ def main():
             TAHRIR_MIQDOR: [MessageHandler(filters.TEXT & ~filters.COMMAND, tahrir_miqdor_received)],
             KAPITEL_SONI: [MessageHandler(filters.TEXT & ~filters.COMMAND, kapitel_soni_received), CallbackQueryHandler(button_handler)],
             BAZA_SONI: [MessageHandler(filters.TEXT & ~filters.COMMAND, baza_soni_received)],
+            RASSILKA: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, rassilka_yuborish),
+                MessageHandler(filters.PHOTO, rassilka_yuborish),
+                MessageHandler(filters.VIDEO, rassilka_yuborish),
+            ],
         },
         fallbacks=[
             CommandHandler("start", start),
@@ -1430,6 +1504,7 @@ def main():
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler("narx", send_price))
     app.add_handler(CommandHandler("narx_yangilash", narx_yangilash_cmd))
+    app.add_handler(CommandHandler("send_all", send_all_cmd))
     app.run_polling()
 
 
