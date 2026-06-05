@@ -22,11 +22,12 @@ SHEET_IDS = {
 def get_gspread_client():
     import base64
     creds_b64 = os.environ.get("GOOGLE_CREDENTIALS_B64")
+    creds_json_str = os.environ.get("GOOGLE_CREDENTIALS")
+    logger.info("GOOGLE_CREDENTIALS_B64 exists: " + str(bool(creds_b64)))
+    logger.info("GOOGLE_CREDENTIALS exists: " + str(bool(creds_json_str)))
     if creds_b64:
-        creds_json = base64.b64decode(creds_b64).decode("utf-8")
-    else:
-        creds_json = os.environ.get("GOOGLE_CREDENTIALS")
-    creds_dict = json.loads(creds_json)
+        creds_json_str = base64.b64decode(creds_b64).decode("utf-8")
+    creds_dict = json.loads(creds_json_str)
     scopes = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     return gspread.authorize(creds)
