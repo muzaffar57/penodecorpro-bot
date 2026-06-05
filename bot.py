@@ -452,7 +452,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         reply_markup=InlineKeyboardMarkup(kb2)
                     )
                     return RAZMER_TANLOV
-                elif category in ["Barelef gullar", "Kalvak", "Shohona karnizlar"]:
+                elif category in ["Barelef gullar", "Kalvak", "Shohona karnizlar", "Yumaloq ustunlar", "Kapitel va baza"]:
                     context.user_data["qoplama"] = "Yo'q"
                     keyboard_aloqa = [
                         [InlineKeyboardButton("📞 Boshqa razmer — aloqaga chiqing", url="https://t.me/penodecorprobot")]
@@ -578,7 +578,15 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Mo'ljal: Yog' zavodi orqa tomoni\n\n"
             "🕐 Ish vaqti:\n"
             "Dushanba — Shanba: 9:00 — 18:00\n\n"
-            "💬 Telegram: @PenoDecorPro"
+            "📲 Ijtimoiy tarmoqlar:\n"
+            "✈️ Telegram: https://t.me/penodecorpro\n"
+            "📸 Instagram: https://www.instagram.com/penodecorpro\n"
+            "▶️ YouTube: https://www.youtube.com/@Penodecorpro"
+        )
+        await context.bot.send_location(
+            chat_id=update.effective_chat.id,
+            latitude=40.765830,
+            longitude=72.348286
         )
         return CHOOSING
 
@@ -667,7 +675,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return RAZMER_TANLOV
 
         # Qoplama so'ralmaydigan bo'limlar
-        if category in ["Barelef gullar", "Kalvak", "Shohona karnizlar"]:
+        if category in ["Barelef gullar", "Kalvak", "Shohona karnizlar", "Yumaloq ustunlar", "Kapitel va baza"]:
             context.user_data["qoplama"] = "Yo'q"
             keyboard_aloqa = [
                 [InlineKeyboardButton("📞 Boshqa razmer — aloqaga chiqing", url="https://t.me/penodecorprobot")]
@@ -1276,8 +1284,8 @@ async def loyiha_photo_received(update: Update, context: ContextTypes.DEFAULT_TY
             await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo.file_id,
                 caption="📐 LOYIHA BO'YICHA HISOBLASH!\n\n👤 " + user.first_name + "\n🆔 " + str(user.id))
         return CHOOSING
-    await update.message.reply_text("Iltimos, rasm yuboring.")
-    return LOYIHA_PHOTO
+    # Rasm emas matn kelsa — menyuga qaytarish
+    return await category_chosen(update, context)
 
 
 async def fasad_photo_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1290,8 +1298,8 @@ async def fasad_photo_received(update: Update, context: ContextTypes.DEFAULT_TYP
             await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo.file_id,
                 caption="🏠 FASAD LOYIHASI!\n\n👤 " + user.first_name + "\n🆔 " + str(user.id) + "\n📝 " + caption)
         return CHOOSING
-    await update.message.reply_text("Iltimos, fasad rasmini yuboring.")
-    return FASAD_PHOTO
+    # Matn kelsa menyuga qaytarish
+    return await category_chosen(update, context)
 
 
 async def custom_photo_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
