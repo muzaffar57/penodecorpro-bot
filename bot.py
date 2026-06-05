@@ -376,7 +376,7 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if jami:
                 msg += "━━━━━━━━━━━━━━\n💰 UMUMIY JAMI: " + format_narx(jami)
             keyboard = [
-                [InlineKeyboardButton("✅ Buyurtma berish", callback_data="buyurtma_ber")],
+                [InlineKeyboardButton("💰 Jami hisobni ko'rish (PDF)", callback_data="hisob_korsatish")],
                 [InlineKeyboardButton("🗑 Savatni tozalash", callback_data="savat_tozala")],
             ]
             await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -543,35 +543,53 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if ADMIN_ID:
                 await context.bot.send_message(chat_id=ADMIN_ID, text=msg)
 
-            # PDF yaratish
+            # PDF yaratish va adminga yuborish
             try:
                 mijoz_ism = user.first_name + " " + (user.last_name or "")
                 pdf_bytes = create_pdf_bytes(mijoz_ism, savat[uid])
-
-                # Mijozga PDF yuborish
-                await context.bot.send_document(
-                    chat_id=uid,
-                    document=pdf_bytes,
-                    filename="PenoDecorPro_buyurtma.pdf",
-                    caption="✅ Buyurtmangiz qabul qilindi!\n\nPDF hisob-kitob yuborildi. Tez orada siz bilan bog'lanamiz. Rahmat! 🙏"
-                )
-
-                # Adminga ham PDF
                 if ADMIN_ID:
                     await context.bot.send_document(
                         chat_id=ADMIN_ID,
                         document=pdf_bytes,
                         filename="PenoDecorPro_buyurtma.pdf",
-                        caption="📄 Mijoz buyurtmasi PDF"
+                        caption="📄 Yangi buyurtma PDF!"
                     )
             except Exception as e:
                 logger.error("PDF xato: " + str(e))
-                await query.message.reply_text("✅ Buyurtmangiz qabul qilindi! Tez orada siz bilan bog'lanamiz. Rahmat! 🙏")
+
+            await context.bot.send_message(
+                chat_id=uid,
+                text="✅ Buyurtmangiz qabul qilindi!\n\nTez orada siz bilan bog'lanamiz. Rahmat! 🙏"
+            )
 
             if uid not in orders:
                 orders[uid] = []
             orders[uid].extend(savat[uid])
             savat[uid] = []
+        return CHOOSING
+
+    if query.data == "hisob_korsatish":
+        user = query.from_user
+        if uid in savat and savat[uid]:
+            try:
+                mijoz_ism = user.first_name + " " + (user.last_name or "")
+                pdf_bytes = create_pdf_bytes(mijoz_ism, savat[uid])
+                keyboard = [
+                    [InlineKeyboardButton("✅ Buyurtma qilish", callback_data="buyurtma_ber")],
+                    [InlineKeyboardButton("🗑 Savatni tozalash", callback_data="savat_tozala")],
+                ]
+                await context.bot.send_document(
+                    chat_id=uid,
+                    document=pdf_bytes,
+                    filename="PenoDecorPro_hisob.pdf",
+                    caption="PDF hisob-kitob. Koring va tasdiqlang:",
+
+                    caption="PDF hisob-kitob. Koring va tasdiqlang:",
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
+            except Exception as e:
+                logger.error("PDF xato: " + str(e))
+                await query.message.reply_text("Xato yuz berdi. Qaytadan urinib ko'ring.")
         return CHOOSING
 
     if query.data == "savat_tozala":
@@ -644,11 +662,7 @@ async def miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if razmer:
         msg += "📏 Razmer: " + razmer + "\n"
     msg += "🖌 Qoplama: " + qoplama + "\n"
-    msg += "📐 Miqdor: " + miqdor_text + "\n"
-    if jami_narx:
-        msg += "💰 Jami narx: " + format_narx(jami_narx)
-    else:
-        msg += "💰 Narx: Tez orada yuboramiz"
+    msg += "📐 Miqdor: " + miqdor_text
 
     await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
     return CHOOSING
@@ -680,7 +694,7 @@ async def olcham_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = "✅ Savatga qo'shildi!\n\n📦 " + category + " — " + model + "\n"
     if razmer:
         msg += "📏 Razmer: " + razmer + "\n"
-    msg += "🖌 Qoplama: " + qoplama + "\n📐 O'lcham: " + olcham + "\n💰 Narx: Tez orada yuboramiz"
+    msg += "🖌 Qoplama: " + qoplama + "\n📐 O'lcham: " + olcham
 
     await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
     return CHOOSING
