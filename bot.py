@@ -203,8 +203,11 @@ def create_pdf_bytes(mijoz_ism, savat_items):
     story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor("#F39C12")))
     story.append(Spacer(1, 0.3*cm))
 
-    sana = datetime.now().strftime("%d.%m.%Y %H:%M")
-    buyurtma_no = "BDP-" + datetime.now().strftime("%Y%m%d%H%M")
+    from datetime import timezone, timedelta
+    uzb_tz = timezone(timedelta(hours=5))
+    now_uzb = datetime.now(uzb_tz)
+    sana = now_uzb.strftime("%d.%m.%Y %H:%M") + " (Andijon vaqti)"
+    buyurtma_no = "BDP-" + now_uzb.strftime("%Y%m%d%H%M")
     info_data = [
         ["Mijoz:", mijoz_ism, "Sana:", sana],
         ["Buyurtma №:", buyurtma_no, "Holat:", "Kutilmoqda"],
