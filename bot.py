@@ -1,5 +1,13 @@
 import os
 import logging
+import io
+from datetime import datetime
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from reportlab.platypus import BaseDocTemplate, PageTemplate, Frame
+from reportlab.lib.units import cm
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler, ConversationHandler
 
@@ -113,6 +121,164 @@ def get_birlik_narx(category, model, razmer, tur=None, qoplama="Ha"):
 def format_narx(narx):
     return "{:,}".format(narx).replace(",", " ") + " so'm"
 
+def create_pdf_bytes(mijoz_ism, savat_items):
+    buffer = io.BytesIO()
+
+    def on_page(canvas_obj, doc):
+        canvas_obj.saveState()
+        w, h = A4
+
+        # Header
+        canvas_obj.setFillColor(colors.HexColor("#1A252F"))
+        canvas_obj.rect(0, h - 3.5*cm, w, 3.5*cm, fill=1, stroke=0)
+
+        # Logo doira
+        canvas_obj.setFillColor(colors.HexColor("#E74C3C"))
+        canvas_obj.circle(3*cm, h - 1.75*cm, 1.1*cm, fill=1, stroke=0)
+        canvas_obj.setFillColor(colors.white)
+        canvas_obj.setFont("Helvetica-Bold", 22)
+        canvas_obj.drawCentredString(3*cm, h - 2.1*cm, "P")
+
+        # Kompaniya nomi
+        canvas_obj.setFillColor(colors.white)
+        canvas_obj.setFont("Helvetica-Bold", 20)
+        canvas_obj.drawString(4.5*cm, h - 1.5*cm, "PenoDecorPro")
+        canvas_obj.setFillColor(colors.HexColor("#BDC3C7"))
+        canvas_obj.setFont("Helvetica", 9)
+        canvas_obj.drawString(4.5*cm, h - 2.1*cm, "Fasad bezaklari ishlab chiqarish")
+
+        # Telefonlar
+        canvas_obj.setFillColor(colors.HexColor("#ECF0F1"))
+        canvas_obj.setFont("Helvetica", 8)
+        canvas_obj.drawRightString(w - 2*cm, h - 1.2*cm, "+998 97 999 57 57")
+        canvas_obj.drawRightString(w - 2*cm, h - 1.7*cm, "+998 90 623 22 72")
+        canvas_obj.drawRightString(w - 2*cm, h - 2.2*cm, "+998 97 699 19 19")
+
+        # Sariq chiziq
+        canvas_obj.setFillColor(colors.HexColor("#F39C12"))
+        canvas_obj.rect(0, h - 3.5*cm, w, 0.15*cm, fill=1, stroke=0)
+
+        # Footer
+        canvas_obj.setFillColor(colors.HexColor("#1A252F"))
+        canvas_obj.rect(0, 0, w, 2.8*cm, fill=1, stroke=0)
+        canvas_obj.setFillColor(colors.HexColor("#F39C12"))
+        canvas_obj.rect(0, 2.8*cm, w, 0.12*cm, fill=1, stroke=0)
+
+        canvas_obj.setFillColor(colors.HexColor("#BDC3C7"))
+        canvas_obj.setFont("Helvetica-Bold", 8)
+        canvas_obj.drawString(2*cm, 2.1*cm, "MANZIL:")
+        canvas_obj.setFont("Helvetica", 8)
+        canvas_obj.drawString(2*cm, 1.7*cm, "Andijon shahar, 134-uy, mo'ljal: Yog' zavodi orqa tomoni")
+
+        canvas_obj.setFillColor(colors.HexColor("#F39C12"))
+        canvas_obj.setFont("Helvetica-Bold", 8)
+        canvas_obj.drawCentredString(w/2, 1.1*cm, "Doimiy mijozlar ro'yxatiga qo'shiling va bonuslarga ega bo'ling!")
+
+        canvas_obj.setFillColor(colors.HexColor("#7F8C8D"))
+        canvas_obj.setFont("Helvetica", 7)
+        canvas_obj.drawRightString(w - 2*cm, 0.4*cm, "PenoDecorPro © 2026")
+
+        canvas_obj.restoreState()
+
+    frame = Frame(2*cm, 3.2*cm, A4[0] - 4*cm, A4[1] - 7.2*cm, id='main')
+    template = PageTemplate(id='main', frames=[frame], onPage=on_page)
+    doc = BaseDocTemplate(buffer, pagesize=A4, pageTemplates=[template])
+
+    story = []
+    title_style = ParagraphStyle('t', fontSize=16, fontName='Helvetica-Bold', alignment=1, textColor=colors.HexColor("#1A252F"), spaceAfter=4)
+    sub_style = ParagraphStyle('s', fontSize=9, fontName='Helvetica', alignment=1, textColor=colors.HexColor("#7F8C8D"), spaceAfter=8)
+
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph("BUYURTMA HISOB-KITOBI", title_style))
+    story.append(Paragraph("Ushbu hujjat rasmiy buyurtma tasdiqlash hujjati hisoblanadi", sub_style))
+    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor("#F39C12")))
+    story.append(Spacer(1, 0.3*cm))
+
+    sana = datetime.now().strftime("%d.%m.%Y %H:%M")
+    buyurtma_no = "BDP-" + datetime.now().strftime("%Y%m%d%H%M")
+    info_data = [
+        ["Mijoz:", mijoz_ism, "Sana:", sana],
+        ["Buyurtma №:", buyurtma_no, "Holat:", "Kutilmoqda"],
+    ]
+    info_table = Table(info_data, colWidths=[2.5*cm, 7.5*cm, 2.5*cm, 4.5*cm])
+    info_table.setStyle(TableStyle([
+        ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
+        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
+        ('FONTNAME', (2,0), (2,-1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 9),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+    ]))
+    story.append(info_table)
+    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#BDC3C7")))
+    story.append(Spacer(1, 0.3*cm))
+
+    table_data = [["#", "Mahsulot", "Miqdor", "Birlik narx", "Jami"]]
+    jami_umumiy = 0
+
+    for i, item in enumerate(savat_items, 1):
+        category = item.get("category", "")
+        model = item.get("model", "")
+        razmer = item.get("razmer", "")
+        qoplama = item.get("qoplama", "")
+        rom_tur = item.get("rom_tur", "")
+        miqdor_text = item.get("miqdor_text", "")
+        jami_narx = item.get("jami_narx", 0) or 0
+        birlik_narx = item.get("birlik_narx", 0) or 0
+
+        mahsulot = category + "\n" + model
+        if rom_tur:
+            mahsulot += " | " + rom_tur
+        if razmer:
+            mahsulot += "\n" + razmer
+        if qoplama:
+            mahsulot += " | Qoplama: " + qoplama
+
+        jami_umumiy += jami_narx
+        table_data.append([
+            str(i), mahsulot, miqdor_text,
+            format_narx(birlik_narx) if birlik_narx else "-",
+            format_narx(jami_narx) if jami_narx else "Hisoblanadi"
+        ])
+
+    table_data.append(["", "", "", "UMUMIY JAMI:", format_narx(jami_umumiy) if jami_umumiy else "Hisoblanadi"])
+
+    col_widths = [0.8*cm, 7*cm, 3.5*cm, 3.2*cm, 3.5*cm]
+    prod_table = Table(table_data, colWidths=col_widths, repeatRows=1)
+    prod_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#1A252F")),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,0), 9),
+        ('ALIGN', (0,0), (-1,0), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,0), 8),
+        ('BOTTOMPADDING', (0,0), (-1,0), 8),
+        ('FONTNAME', (0,1), (-1,-2), 'Helvetica'),
+        ('FONTSIZE', (0,1), (-1,-1), 8.5),
+        ('ROWBACKGROUNDS', (0,1), (-1,-2), [colors.white, colors.HexColor("#F8F9FA")]),
+        ('GRID', (0,0), (-1,-2), 0.5, colors.HexColor("#DEE2E6")),
+        ('TOPPADDING', (0,1), (-1,-1), 6),
+        ('BOTTOMPADDING', (0,1), (-1,-1), 6),
+        ('LEFTPADDING', (1,1), (1,-1), 6),
+        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor("#EBF5FB")),
+        ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,-1), (-1,-1), 10),
+        ('TEXTCOLOR', (3,-1), (-1,-1), colors.HexColor("#E74C3C")),
+        ('LINEABOVE', (0,-1), (-1,-1), 2, colors.HexColor("#1A252F")),
+        ('ALIGN', (2,1), (-1,-1), 'CENTER'),
+    ]))
+    story.append(prod_table)
+    story.append(Spacer(1, 0.5*cm))
+
+    rahmat_style = ParagraphStyle('r', fontSize=9, fontName='Helvetica-Bold',
+        alignment=1, textColor=colors.HexColor("#E74C3C"))
+    story.append(Paragraph("Rahmat! Buyurtmangiz qabul qilindi. Tez orada siz bilan bog'lanamiz.", rahmat_style))
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
+
 KATALOG_LINKS = {
     "Rom bezaklari": "https://muzaffar57.github.io/-penodecor-katalog/katalog.html",
     "Ustunlar": "https://muzaffar57.github.io/-penodecor-katalog/ustun.html",
@@ -134,7 +300,6 @@ KATALOG_COUNTS = {
 USTUN_RAZMERLAR = ["25sm", "30sm", "35sm", "40sm", "45sm", "50sm"]
 KARNIZ_RAZMERLAR = ["Kichik (17sm)", "Ortacha (20sm)", "Katta (25sm)", "25sm dan katta"]
 
-# Miqdor so'rash shablonlari
 MIQDOR_SHABLONLAR = {
     "Rom bezaklari": "Nechta rom va nechta eshik bor?\n\nRom soni: ___\nEshik soni: ___\n\nMasalan:\nRom soni: 8\nEshik soni: 4",
     "Ustunlar": "Qancha metr kerak?\nMasalan: 12",
@@ -209,8 +374,7 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     jami += s["jami_narx"]
                 msg += "\n"
             if jami:
-                msg += "━━━━━━━━━━━━━━\n"
-                msg += "💰 UMUMIY JAMI: " + format_narx(jami)
+                msg += "━━━━━━━━━━━━━━\n💰 UMUMIY JAMI: " + format_narx(jami)
             keyboard = [
                 [InlineKeyboardButton("✅ Buyurtma berish", callback_data="buyurtma_ber")],
                 [InlineKeyboardButton("🗑 Savatni tozalash", callback_data="savat_tozala")],
@@ -222,7 +386,7 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if text == "📐 Loyiha bo'yicha hisoblash":
         context.user_data["category"] = text
-        await update.message.reply_text("📐 Loyiha bo'yicha hisoblash\n\nLoyihangiz rasmini yuboring — biz ko'rib chiqib narx hisoblaymiz.")
+        await update.message.reply_text("📐 Loyiha bo'yicha hisoblash\n\nLoyihangiz rasmini yuboring.")
         return LOYIHA_PHOTO
 
     if text == "🏠 Fasad loyihasi tayyorlash":
@@ -231,7 +395,7 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return FASAD_PHOTO
 
     if text == "🏗️ Bajarilgan loyihalar":
-        await update.message.reply_text("🏗️ Bajarilgan loyihalarni ko'rish:\n\nhttps://muzaffar57.github.io/-penodecor-katalog/loyihalar.html")
+        await update.message.reply_text("🏗️ Bajarilgan loyihalar:\n\nhttps://muzaffar57.github.io/-penodecor-katalog/loyihalar.html")
         return CHOOSING
 
     if text == "🌟 Keng qamrovlik yechim":
@@ -309,7 +473,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data.startswith("razmer_"):
         razmer_raw = query.data.replace("razmer_", "")
-        # Restore razmer name
         if razmer_raw in USTUN_RAZMERLAR:
             razmer = razmer_raw
         elif "Katta_razmer" in razmer_raw:
@@ -342,14 +505,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data in ["qoplama_ha", "qoplama_yoq"]:
         context.user_data["qoplama"] = "Ha" if query.data == "qoplama_ha" else "Yo'q"
         category = context.user_data.get("category", "")
-
         if category in MIQDOR_SHABLONLAR:
-            shablon = MIQDOR_SHABLONLAR[category]
-            await query.message.reply_text("📐 " + shablon)
+            await query.message.reply_text("📐 " + MIQDOR_SHABLONLAR[category])
             return MIQDOR
         else:
-            shablon = OLCHAM_SHABLONLAR.get(category, "O'lchamlarni kiriting:")
-            await query.message.reply_text("📐 " + shablon)
+            await query.message.reply_text("📐 " + OLCHAM_SHABLONLAR.get(category, "O'lchamlarni kiriting:"))
             return OLCHAM
 
     if query.data == "custom_photo":
@@ -359,10 +519,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "buyurtma_ber":
         user = query.from_user
         if uid in savat and savat[uid]:
+            # Admin ga matn
             msg = "🆕 YANGI BUYURTMA!\n\n"
             msg += "👤 Mijoz: " + user.first_name + " " + (user.last_name or "") + "\n"
             msg += "🆔 ID: " + str(uid) + "\n\n"
-            msg += "🛒 Buyurtma tarkibi:\n\n"
             jami = 0
             for i, s in enumerate(savat[uid], 1):
                 msg += str(i) + ". " + s["category"] + " — " + s.get("model", "") + "\n"
@@ -379,13 +539,39 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 msg += "\n"
             if jami:
                 msg += "━━━━━━━━━━━━━━\n💰 UMUMIY JAMI: " + format_narx(jami)
+
             if ADMIN_ID:
                 await context.bot.send_message(chat_id=ADMIN_ID, text=msg)
+
+            # PDF yaratish
+            try:
+                mijoz_ism = user.first_name + " " + (user.last_name or "")
+                pdf_bytes = create_pdf_bytes(mijoz_ism, savat[uid])
+
+                # Mijozga PDF yuborish
+                await context.bot.send_document(
+                    chat_id=uid,
+                    document=pdf_bytes,
+                    filename="PenoDecorPro_buyurtma.pdf",
+                    caption="✅ Buyurtmangiz qabul qilindi!\n\nPDF hisob-kitob yuborildi. Tez orada siz bilan bog'lanamiz. Rahmat! 🙏"
+                )
+
+                # Adminga ham PDF
+                if ADMIN_ID:
+                    await context.bot.send_document(
+                        chat_id=ADMIN_ID,
+                        document=pdf_bytes,
+                        filename="PenoDecorPro_buyurtma.pdf",
+                        caption="📄 Mijoz buyurtmasi PDF"
+                    )
+            except Exception as e:
+                logger.error("PDF xato: " + str(e))
+                await query.message.reply_text("✅ Buyurtmangiz qabul qilindi! Tez orada siz bilan bog'lanamiz. Rahmat! 🙏")
+
             if uid not in orders:
                 orders[uid] = []
             orders[uid].extend(savat[uid])
             savat[uid] = []
-            await query.message.reply_text("✅ Buyurtmangiz qabul qilindi!\n\nTez orada siz bilan bog'lanamiz. Rahmat! 🙏")
         return CHOOSING
 
     if query.data == "savat_tozala":
@@ -408,16 +594,13 @@ async def miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     jami_narx = 0
     miqdor_text = text
+    birlik_narx = 0
 
     try:
+        import re
         if category == "Rom bezaklari":
-            # Parse "Rom soni: 8\nEshik soni: 4"
             rom_soni = 0
             eshik_soni = 0
-            for line in text.replace("\n", " ").split():
-                pass
-            # Simple parsing
-            import re
             rom_match = re.search(r'[Rr]om\s*[Ss]oni\s*[:\-]?\s*(\d+)', text)
             eshik_match = re.search(r'[Ee]shik\s*[Ss]oni\s*[:\-]?\s*(\d+)', text)
             if rom_match:
@@ -427,12 +610,11 @@ async def miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             rom_narx = get_birlik_narx(category, model, razmer, "Rom bezak", qoplama) or 0
             eshik_narx = get_birlik_narx(category, model, razmer, "Eshik bezak", qoplama) or 0
-
             jami_narx = rom_soni * rom_narx + eshik_soni * eshik_narx
             miqdor_text = str(rom_soni) + " ta rom, " + str(eshik_soni) + " ta eshik"
+            birlik_narx = rom_narx
 
         elif category in ["Ustunlar", "Karnizlar", "Belbog' karnizlar"]:
-            import re
             metr_match = re.search(r'(\d+[\.,]?\d*)', text)
             if metr_match:
                 metr = float(metr_match.group(1).replace(",", "."))
@@ -440,12 +622,12 @@ async def miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 jami_narx = int(metr * birlik_narx)
                 miqdor_text = str(metr) + " metr"
     except Exception as e:
-        logger.error("Miqdor hisoblashda xato: " + str(e))
+        logger.error("Miqdor xato: " + str(e))
 
     item = {
         "category": category, "model": model, "rom_tur": rom_tur,
         "qoplama": qoplama, "razmer": razmer,
-        "miqdor_text": miqdor_text, "jami_narx": jami_narx,
+        "miqdor_text": miqdor_text, "jami_narx": jami_narx, "birlik_narx": birlik_narx,
     }
 
     if uid not in savat:
@@ -458,8 +640,7 @@ async def miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     msg = "✅ Savatga qo'shildi!\n\n"
-    msg += "📦 " + category + "\n"
-    msg += "🎨 Model: " + model + "\n"
+    msg += "📦 " + category + " — " + model + "\n"
     if razmer:
         msg += "📏 Razmer: " + razmer + "\n"
     msg += "🖌 Qoplama: " + qoplama + "\n"
@@ -484,7 +665,8 @@ async def olcham_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     rom_tur = context.user_data.get("rom_tur", "")
 
     item = {"category": category, "model": model, "rom_tur": rom_tur,
-            "qoplama": qoplama, "razmer": razmer, "miqdor_text": olcham, "jami_narx": None}
+            "qoplama": qoplama, "razmer": razmer, "miqdor_text": olcham,
+            "jami_narx": None, "birlik_narx": None}
 
     if uid not in savat:
         savat[uid] = []
@@ -495,14 +677,10 @@ async def olcham_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("➕ Yana mahsulot qo'shish", callback_data="yana_qosh")],
     ]
 
-    msg = "✅ Savatga qo'shildi!\n\n"
-    msg += "📦 " + category + "\n"
-    msg += "🎨 Model: " + model + "\n"
+    msg = "✅ Savatga qo'shildi!\n\n📦 " + category + " — " + model + "\n"
     if razmer:
         msg += "📏 Razmer: " + razmer + "\n"
-    msg += "🖌 Qoplama: " + qoplama + "\n"
-    msg += "📐 O'lcham: " + olcham + "\n"
-    msg += "💰 Narx: Tez orada yuboramiz"
+    msg += "🖌 Qoplama: " + qoplama + "\n📐 O'lcham: " + olcham + "\n💰 Narx: Tez orada yuboramiz"
 
     await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
     return CHOOSING
@@ -515,7 +693,7 @@ async def loyiha_photo_received(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text("✅ Loyihangiz qabul qilindi!\n\nMutaxassislarimiz ko'rib chiqib, tez orada narx yuboramiz. Rahmat! 🙏")
         if ADMIN_ID:
             await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo.file_id,
-                caption="📐 LOYIHA BO'YICHA HISOBLASH!\n\n👤 Mijoz: " + user.first_name + " " + (user.last_name or "") + "\n🆔 ID: " + str(user.id))
+                caption="📐 LOYIHA BO'YICHA HISOBLASH!\n\n👤 " + user.first_name + "\n🆔 " + str(user.id))
         return CHOOSING
     await update.message.reply_text("Iltimos, rasm yuboring.")
     return LOYIHA_PHOTO
@@ -529,7 +707,7 @@ async def fasad_photo_received(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text("✅ Fasad rasmingiz qabul qilindi!\n\nDizaynerlarimiz loyiha tayyorlab, tez orada yuboramiz. Rahmat! 🙏")
         if ADMIN_ID:
             await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo.file_id,
-                caption="🏠 FASAD LOYIHASI!\n\n👤 Mijoz: " + user.first_name + " " + (user.last_name or "") + "\n🆔 ID: " + str(user.id) + "\n📝 Izoh: " + caption)
+                caption="🏠 FASAD LOYIHASI!\n\n👤 " + user.first_name + "\n🆔 " + str(user.id) + "\n📝 " + caption)
         return CHOOSING
     await update.message.reply_text("Iltimos, fasad rasmini yuboring.")
     return FASAD_PHOTO
@@ -546,9 +724,8 @@ async def custom_photo_received(update: Update, context: ContextTypes.DEFAULT_TY
         ]
         await update.message.reply_text("Rasmingiz qabul qilindi!\n\nQoplama tortilsinmi?", reply_markup=InlineKeyboardMarkup(keyboard))
         if ADMIN_ID:
-            cat = context.user_data.get("category", "Noma'lum")
             await context.bot.send_photo(chat_id=ADMIN_ID, photo=photo.file_id,
-                caption="📷 Yangi namuna rasmi!\n👤 " + user.first_name + "\n🆔 " + str(user.id) + "\n📦 " + cat)
+                caption="📷 Yangi namuna!\n👤 " + user.first_name + "\n🆔 " + str(user.id))
         return QOPLAMA
     await update.message.reply_text("Iltimos, rasm yuboring.")
     return CUSTOM_PHOTO
