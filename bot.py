@@ -8,7 +8,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from reportlab.platypus import BaseDocTemplate, PageTemplate, Frame
 from reportlab.lib.units import cm
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler, ConversationHandler
 
 logging.basicConfig(level=logging.INFO)
@@ -393,6 +393,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     foydalanuvchi_qoshish(user.id, user.first_name, user.username or "")
     keyboard = [
         [KeyboardButton("📐 Mahsulotlar (Katalog)")],
+        [KeyboardButton("🌐 Online Katalog & Buyurtma", web_app=WebAppInfo(url="https://muzaffar57.github.io/-penodecor-katalog/webapp.html"))],
         [KeyboardButton("🧮 Loyiha bo'yicha hisoblash")],
         [KeyboardButton("🏡 Fasad loyihasi tayyorlash")],
         [KeyboardButton("🏗 Bajarilgan loyihalar")],
@@ -1379,6 +1380,48 @@ async def custom_photo_received(update: Update, context: ContextTypes.DEFAULT_TY
     return CUSTOM_PHOTO
 
 
+async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """WebApp dan kelgan buyurtmani qabul qilish."""
+    import json
+    user = update.effective_user
+    data_str = update.effective_message.web_app_data.data
+    try:
+        data = json.loads(data_str)
+        savat_items = data.get("savat", [])
+        jami = data.get("jami_summa", 0)
+
+        if not savat_items:
+            await update.message.reply_text("Savat bo'sh!")
+            return
+
+        # Foydalanuvchiga xabar
+        msg = "✅ Buyurtmangiz qabul qilindi!\n\n"
+        for i, item in enumerate(savat_items, 1):
+            msg += f"{i}. {item['mahsulot']}\n"
+            msg += f"   📐 {item['miqdor']}\n"
+            msg += f"   💰 {item['jami']:,} so'm\n\n"
+        msg += f"💵 Jami: {jami:,} so'm\n\n"
+        msg += "Tez orada menejer siz bilan bog'lanadi!"
+
+        await update.message.reply_text(msg)
+
+        # Adminga xabar
+        admin_msg = f"🆕 WEBAPP BUYURTMA!\n\n"
+        admin_msg += f"👤 {user.first_name}"
+        if user.username:
+            admin_msg += f" (@{user.username})"
+        admin_msg += f"\n🆔 {user.id}\n\n"
+        for i, item in enumerate(savat_items, 1):
+            admin_msg += f"{i}. {item['mahsulot']} — {item['miqdor']} — {item['jami']:,} so'm\n"
+        admin_msg += f"\n💵 JAMI: {jami:,} so'm"
+
+        await context.bot.send_message(chat_id=ADMIN_ID, text=admin_msg)
+
+    except Exception as e:
+        logger.error(f"WebApp xato: {e}")
+        await update.message.reply_text("Xato yuz berdi. Qayta urinib ko'ring.")
+
+
 async def send_all_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Admin rassilka boshlaydi."""
     if update.effective_user.id != ADMIN_ID:
@@ -1508,6 +1551,7 @@ def main():
     app.add_handler(CommandHandler("narx", send_price))
     app.add_handler(CommandHandler("narx_yangilash", narx_yangilash_cmd))
     app.add_handler(CommandHandler("send_all", send_all_cmd))
+    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp_data_received))
     app.run_polling()
 
 
