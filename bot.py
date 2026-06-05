@@ -298,7 +298,14 @@ KATALOG_COUNTS = {
 }
 
 USTUN_RAZMERLAR = ["25sm", "30sm", "35sm", "40sm", "45sm", "50sm"]
-KARNIZ_RAZMERLAR = ["Kichik (17sm)", "Ortacha (20sm)", "Katta (25sm)", "25sm dan katta"]
+KARNIZ_RAZMERLAR = ["17sm", "20sm", "25sm", "25sm dan katta"]
+
+# Karniz razmer → narx kaliti mapping
+KARNIZ_RAZMER_MAP = {
+    "17sm": "Kichik (17sm)",
+    "20sm": "Ortacha (20sm)",
+    "25sm": "Katta (25sm)",
+}
 
 MIQDOR_SHABLONLAR = {
     "Rom bezaklari": "Nechta rom va nechta eshik bor?\n\nRom soni: ___\nEshik soni: ___\n\nMasalan:\nRom soni: 8\nEshik soni: 4",
@@ -315,7 +322,7 @@ OLCHAM_SHABLONLAR = {
     "Kalvak": "O'lchamlarni kiriting:\nUzunligi: ___\nEni: ___\nQalinligi: ___\nSoni: ___",
 }
 
-CHOOSING, MODEL_SELECTION, QOPLAMA, RAZMER_TANLOV, ROM_TUR, MIQDOR, OLCHAM, LOYIHA_PHOTO, FASAD_PHOTO, CUSTOM_PHOTO = range(10)
+CHOOSING, MODEL_SELECTION, QOPLAMA, RAZMER_TANLOV, ROM_TUR, ROM_SONI, ESHIK_SONI, MIQDOR, OLCHAM, LOYIHA_PHOTO, FASAD_PHOTO, CUSTOM_PHOTO, KONTAKT_ISM, KONTAKT_TEL = range(14)
 
 orders = {}
 savat = {}
@@ -447,7 +454,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return ROM_TUR
 
         if category in ["Karnizlar", "Belbog' karnizlar"]:
-            buttons = [[InlineKeyboardButton(r, callback_data="razmer_" + r.replace(" ", "_").replace("(", "").replace(")", ""))] for r in KARNIZ_RAZMERLAR]
+            buttons = [[InlineKeyboardButton(r, callback_data="razmer_" + r.replace(" ", "_"))] for r in KARNIZ_RAZMERLAR]
             buttons.append([InlineKeyboardButton("🔙 Orqaga", callback_data="orqaga_model")])
             await query.message.reply_text(model + " tanlandingiz!\n\nRazmer tanlang:", reply_markup=InlineKeyboardMarkup(buttons))
             return RAZMER_TANLOV
@@ -478,24 +485,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return RAZMER_TANLOV
 
     if query.data.startswith("razmer_"):
-        razmer_raw = query.data.replace("razmer_", "")
-        if razmer_raw in USTUN_RAZMERLAR:
-            razmer = razmer_raw
-        elif "Katta_razmer" in razmer_raw:
-            razmer = "Katta razmer"
-        elif "Kichik_razmer" in razmer_raw:
-            razmer = "Kichik razmer"
-        elif "Kichik_17sm" in razmer_raw:
-            razmer = "Kichik (17sm)"
-        elif "Ortacha_20sm" in razmer_raw:
-            razmer = "Ortacha (20sm)"
-        elif "Katta_25sm" in razmer_raw:
-            razmer = "Katta (25sm)"
-        elif "25sm_dan_katta" in razmer_raw:
-            razmer = "25sm dan katta"
-        else:
-            razmer = razmer_raw.replace("_", " ")
+        razmer_raw = query.data.replace("razmer_", "").replace("_", " ")
+        # Karniz uchun narx kalitiga o'tkazish
+        razmer = KARNIZ_RAZMER_MAP.get(razmer_raw, razmer_raw)
         context.user_data["razmer"] = razmer
+        context.user_data["razmer_display"] = razmer_raw  # Ko'rsatish uchun
 
         if razmer == "25sm dan katta":
             await query.message.reply_text("Katta razmer uchun bizga murojaat qiling:\n\n📞 Telefon orqali yoki admin bilan bog'laning.")
@@ -512,7 +506,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data in ["qoplama_ha", "qoplama_yoq"]:
         context.user_data["qoplama"] = "Ha" if query.data == "qoplama_ha" else "Yo'q"
         category = context.user_data.get("category", "")
-        if category in MIQDOR_SHABLONLAR:
+        if category == "Rom bezaklari":
+            await query.message.reply_text("Nechta ROM kerak?\n\nFaqat raqam yozing:\nMasalan: 8")
+            return ROM_SONI
+        elif category in MIQDOR_SHABLONLAR:
             await query.message.reply_text("📐 " + MIQDOR_SHABLONLAR[category])
             return MIQDOR
         else:
@@ -524,56 +521,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return CUSTOM_PHOTO
 
     if query.data == "buyurtma_ber":
-        user = query.from_user
-        if uid in savat and savat[uid]:
-            # Admin ga matn
-            msg = "🆕 YANGI BUYURTMA!\n\n"
-            msg += "👤 Mijoz: " + user.first_name + " " + (user.last_name or "") + "\n"
-            msg += "🆔 ID: " + str(uid) + "\n\n"
-            jami = 0
-            for i, s in enumerate(savat[uid], 1):
-                msg += str(i) + ". " + s["category"] + " — " + s.get("model", "") + "\n"
-                if s.get("rom_tur"):
-                    msg += "   Tur: " + s["rom_tur"] + "\n"
-                if s.get("razmer"):
-                    msg += "   Razmer: " + s["razmer"] + "\n"
-                msg += "   Qoplama: " + s.get("qoplama", "") + "\n"
-                if s.get("miqdor_text"):
-                    msg += "   Miqdor: " + s["miqdor_text"] + "\n"
-                if s.get("jami_narx"):
-                    msg += "   Jami: " + format_narx(s["jami_narx"]) + "\n"
-                    jami += s["jami_narx"]
-                msg += "\n"
-            if jami:
-                msg += "━━━━━━━━━━━━━━\n💰 UMUMIY JAMI: " + format_narx(jami)
-
-            if ADMIN_ID:
-                await context.bot.send_message(chat_id=ADMIN_ID, text=msg)
-
-            # PDF yaratish va adminga yuborish
-            try:
-                mijoz_ism = user.first_name + " " + (user.last_name or "")
-                pdf_bytes = create_pdf_bytes(mijoz_ism, savat[uid])
-                if ADMIN_ID:
-                    await context.bot.send_document(
-                        chat_id=ADMIN_ID,
-                        document=pdf_bytes,
-                        filename="PenoDecorPro_buyurtma.pdf",
-                        caption="📄 Yangi buyurtma PDF!"
-                    )
-            except Exception as e:
-                logger.error("PDF xato: " + str(e))
-
-            await context.bot.send_message(
-                chat_id=uid,
-                text="✅ Buyurtmangiz qabul qilindi!\n\nTez orada siz bilan bog'lanamiz. Rahmat! 🙏"
-            )
-
-            if uid not in orders:
-                orders[uid] = []
-            orders[uid].extend(savat[uid])
-            savat[uid] = []
-        return CHOOSING
+        await query.message.reply_text(
+            "Buyurtmani rasmiylashtirish uchun:\n\n"
+            "Ismingizni yozing:\nMasalan: Akbar Karimov"
+        )
+        return KONTAKT_ISM
 
     if query.data == "hisob_korsatish":
         user = query.from_user
@@ -637,6 +589,143 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return CHOOSING
 
 
+async def rom_soni_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text.strip()
+    try:
+        soni = int(text)
+        context.user_data["rom_soni"] = soni
+        await update.message.reply_text(
+            "Nechta ESHIK kerak?\n\nFaqat raqam yozing:\nMasalan: 4"
+        )
+        return ESHIK_SONI
+    except:
+        await update.message.reply_text("Iltimos, faqat raqam yozing!\nMasalan: 8")
+        return ROM_SONI
+
+
+async def eshik_soni_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid = update.effective_user.id
+    text = update.message.text.strip()
+    try:
+        eshik_soni = int(text)
+    except:
+        await update.message.reply_text("Iltimos, faqat raqam yozing!\nMasalan: 4")
+        return ESHIK_SONI
+
+    rom_soni = context.user_data.get("rom_soni", 0)
+    category = context.user_data.get("category", "")
+    model = context.user_data.get("model", "")
+    qoplama = context.user_data.get("qoplama", "Ha")
+    razmer = context.user_data.get("razmer", "")
+
+    rom_narx = get_birlik_narx(category, model, razmer, "Rom bezak", qoplama) or 0
+    eshik_narx = get_birlik_narx(category, model, razmer, "Eshik bezak", qoplama) or 0
+
+    if uid not in savat:
+        savat[uid] = []
+
+    if rom_soni > 0:
+        savat[uid].append({
+            "category": "Rom bezaklari", "model": model,
+            "rom_tur": "Rom bezak", "qoplama": qoplama, "razmer": razmer,
+            "miqdor_text": str(rom_soni) + " ta dona",
+            "jami_narx": rom_soni * rom_narx, "birlik_narx": rom_narx,
+        })
+    if eshik_soni > 0:
+        savat[uid].append({
+            "category": "Rom bezaklari", "model": model,
+            "rom_tur": "Eshik bezak", "qoplama": qoplama, "razmer": razmer,
+            "miqdor_text": str(eshik_soni) + " ta dona",
+            "jami_narx": eshik_soni * eshik_narx, "birlik_narx": eshik_narx,
+        })
+
+    jami = rom_soni * rom_narx + eshik_soni * eshik_narx
+
+    keyboard = [
+        [InlineKeyboardButton("💰 Jami hisobni ko'rish (PDF)", callback_data="hisob_korsatish")],
+        [InlineKeyboardButton("➕ Yana mahsulot qo'shish", callback_data="yana_qosh")],
+    ]
+
+    msg = "✅ Savatga qo'shildi!\n\n"
+    msg += "📦 Rom bezaklari — " + model + "\n"
+    msg += "📏 Razmer: " + razmer + "\n"
+    msg += "🖌 Qoplama: " + qoplama + "\n"
+    if rom_soni > 0:
+        msg += "🪟 Rom: " + str(rom_soni) + " ta × " + format_narx(rom_narx) + " = " + format_narx(rom_soni * rom_narx) + "\n"
+    if eshik_soni > 0:
+        msg += "🚪 Eshik: " + str(eshik_soni) + " ta × " + format_narx(eshik_narx) + " = " + format_narx(eshik_soni * eshik_narx) + "\n"
+    msg += "💰 Jami: " + format_narx(jami)
+
+    await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
+    return CHOOSING
+
+
+async def kontakt_ism_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    ism = update.message.text.strip()
+    context.user_data["kontakt_ism"] = ism
+    await update.message.reply_text(
+        "Telefon raqamingizni yozing:\nMasalan: +998901234567"
+    )
+    return KONTAKT_TEL
+
+
+async def kontakt_tel_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    uid = user.id
+    tel = update.message.text.strip()
+    ism = context.user_data.get("kontakt_ism", user.first_name)
+
+    if uid in savat and savat[uid]:
+        # Admin ga xabar
+        msg = "🆕 YANGI BUYURTMA!\n\n"
+        msg += "👤 Ism: " + ism + "\n"
+        msg += "📞 Tel: " + tel + "\n"
+        msg += "🆔 Telegram ID: " + str(uid) + "\n\n"
+        jami = 0
+        for i, s in enumerate(savat[uid], 1):
+            msg += str(i) + ". " + s["category"] + " — " + s.get("model", "") + "\n"
+            if s.get("rom_tur"):
+                msg += "   Tur: " + s["rom_tur"] + "\n"
+            if s.get("razmer"):
+                msg += "   Razmer: " + s["razmer"] + "\n"
+            msg += "   Qoplama: " + s.get("qoplama", "") + "\n"
+            if s.get("miqdor_text"):
+                msg += "   Miqdor: " + s["miqdor_text"] + "\n"
+            if s.get("jami_narx"):
+                msg += "   Jami: " + format_narx(s["jami_narx"]) + "\n"
+                jami += s["jami_narx"]
+            msg += "\n"
+        if jami:
+            msg += "━━━━━━━━━━━━━━\n💰 UMUMIY JAMI: " + format_narx(jami)
+
+        if ADMIN_ID:
+            await context.bot.send_message(chat_id=ADMIN_ID, text=msg)
+
+        # PDF adminga yuborish
+        try:
+            pdf_bytes = create_pdf_bytes(ism + " | " + tel, savat[uid])
+            if ADMIN_ID:
+                await context.bot.send_document(
+                    chat_id=ADMIN_ID,
+                    document=pdf_bytes,
+                    filename="PenoDecorPro_buyurtma.pdf",
+                    caption="📄 Yangi buyurtma PDF!\n👤 " + ism + "\n📞 " + tel
+                )
+        except Exception as e:
+            logger.error("PDF xato: " + str(e))
+
+        if uid not in orders:
+            orders[uid] = []
+        orders[uid].extend(savat[uid])
+        savat[uid] = []
+
+    await update.message.reply_text(
+        "✅ Buyurtmangiz qabul qilindi!\n\n"
+        "Tez orada " + tel + " raqamiga qo'ng'iroq qilamiz. Rahmat! 🙏"
+    )
+    return CHOOSING
+
+
 async def miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     uid = user.id
@@ -645,7 +734,6 @@ async def miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     model = context.user_data.get("model", "")
     qoplama = context.user_data.get("qoplama", "Ha")
     razmer = context.user_data.get("razmer", "")
-    rom_tur = context.user_data.get("rom_tur", "")
 
     jami_narx = 0
     miqdor_text = text
@@ -655,52 +743,17 @@ async def miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
         import re
         if uid not in savat:
             savat[uid] = []
-
-        if category == "Rom bezaklari":
-            rom_soni = 0
-            eshik_soni = 0
-            rom_match = re.search(r'[Rr]om\s*[Ss]oni\s*[:\-]?\s*(\d+)', text)
-            eshik_match = re.search(r'[Ee]shik\s*[Ss]oni\s*[:\-]?\s*(\d+)', text)
-            if rom_match:
-                rom_soni = int(rom_match.group(1))
-            if eshik_match:
-                eshik_soni = int(eshik_match.group(1))
-
-            rom_narx = get_birlik_narx(category, model, razmer, "Rom bezak", qoplama) or 0
-            eshik_narx = get_birlik_narx(category, model, razmer, "Eshik bezak", qoplama) or 0
-
-            # Rom va eshikni ALOHIDA savatga qo'shish
-            if rom_soni > 0:
-                savat[uid].append({
-                    "category": "Rom bezaklari", "model": model,
-                    "rom_tur": "Rom bezak", "qoplama": qoplama, "razmer": razmer,
-                    "miqdor_text": str(rom_soni) + " ta dona",
-                    "jami_narx": rom_soni * rom_narx, "birlik_narx": rom_narx,
-                })
-            if eshik_soni > 0:
-                savat[uid].append({
-                    "category": "Rom bezaklari", "model": model,
-                    "rom_tur": "Eshik bezak", "qoplama": qoplama, "razmer": razmer,
-                    "miqdor_text": str(eshik_soni) + " ta dona",
-                    "jami_narx": eshik_soni * eshik_narx, "birlik_narx": eshik_narx,
-                })
-
-            jami_narx = rom_soni * rom_narx + eshik_soni * eshik_narx
-            miqdor_text = str(rom_soni) + " ta rom, " + str(eshik_soni) + " ta eshik"
-
-        else:
-            metr_match = re.search(r'(\d+[\.,]?\d*)', text)
-            if metr_match:
-                metr = float(metr_match.group(1).replace(",", "."))
-                birlik_narx = get_birlik_narx(category, model, razmer, None, qoplama) or 0
-                jami_narx = int(metr * birlik_narx)
-                miqdor_text = str(metr) + " metr"
-                savat[uid].append({
-                    "category": category, "model": model, "rom_tur": "",
-                    "qoplama": qoplama, "razmer": razmer,
-                    "miqdor_text": miqdor_text, "jami_narx": jami_narx, "birlik_narx": birlik_narx,
-                })
-
+        metr_match = re.search(r'(\d+[\.,]?\d*)', text)
+        if metr_match:
+            metr = float(metr_match.group(1).replace(",", "."))
+            birlik_narx = get_birlik_narx(category, model, razmer, None, qoplama) or 0
+            jami_narx = int(metr * birlik_narx)
+            miqdor_text = str(int(metr)) + " metr"
+            savat[uid].append({
+                "category": category, "model": model, "rom_tur": "",
+                "qoplama": qoplama, "razmer": razmer,
+                "miqdor_text": miqdor_text, "jami_narx": jami_narx, "birlik_narx": birlik_narx,
+            })
     except Exception as e:
         logger.error("Miqdor xato: " + str(e))
 
@@ -825,11 +878,15 @@ def main():
             ROM_TUR: [CallbackQueryHandler(button_handler)],
             RAZMER_TANLOV: [CallbackQueryHandler(button_handler)],
             QOPLAMA: [CallbackQueryHandler(button_handler)],
+            ROM_SONI: [MessageHandler(filters.TEXT & ~filters.COMMAND, rom_soni_received)],
+            ESHIK_SONI: [MessageHandler(filters.TEXT & ~filters.COMMAND, eshik_soni_received)],
             MIQDOR: [MessageHandler(filters.TEXT & ~filters.COMMAND, miqdor_received)],
             OLCHAM: [MessageHandler(filters.TEXT & ~filters.COMMAND, olcham_received)],
             LOYIHA_PHOTO: [MessageHandler(filters.PHOTO, loyiha_photo_received)],
             FASAD_PHOTO: [MessageHandler(filters.PHOTO, fasad_photo_received), MessageHandler(filters.TEXT & ~filters.COMMAND, fasad_photo_received)],
             CUSTOM_PHOTO: [MessageHandler(filters.PHOTO, custom_photo_received)],
+            KONTAKT_ISM: [MessageHandler(filters.TEXT & ~filters.COMMAND, kontakt_ism_received)],
+            KONTAKT_TEL: [MessageHandler(filters.TEXT & ~filters.COMMAND, kontakt_tel_received)],
         },
         fallbacks=[CommandHandler("start", start)],
     )
