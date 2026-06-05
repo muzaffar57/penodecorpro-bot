@@ -322,7 +322,7 @@ OLCHAM_SHABLONLAR = {
     "Kalvak": "O'lchamlarni kiriting:\nUzunligi: ___\nEni: ___\nQalinligi: ___\nSoni: ___",
 }
 
-CHOOSING, MODEL_SELECTION, QOPLAMA, RAZMER_TANLOV, ROM_TUR, ROM_SONI, ESHIK_SONI, MIQDOR, OLCHAM, LOYIHA_PHOTO, FASAD_PHOTO, CUSTOM_PHOTO, KONTAKT_ISM, KONTAKT_TEL = range(14)
+CHOOSING, MODEL_SELECTION, QOPLAMA, RAZMER_TANLOV, ROM_TUR, ROM_SONI, ESHIK_SONI, MIQDOR, OLCHAM, LOYIHA_PHOTO, FASAD_PHOTO, CUSTOM_PHOTO, KONTAKT_ISM, KONTAKT_TEL, TAHRIR_MIQDOR = range(15)
 
 orders = {}
 savat = {}
@@ -369,24 +369,37 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if text == "🛒 Savatim":
         if uid in savat and savat[uid]:
-            msg = "🛒 Savatingiz:\n\n"
-            for i, s in enumerate(savat[uid], 1):
-                msg += str(i) + ". " + s["category"] + " — " + s.get("model", "") + "\n"
+            for i, s in enumerate(savat[uid]):
+                # Har mahsulot uchun alohida xabar
+                mahsulot = s["category"] + " — " + s.get("model", "")
                 if s.get("rom_tur"):
-                    msg += "   Tur: " + s["rom_tur"] + "\n"
+                    mahsulot += " | " + s["rom_tur"]
                 if s.get("razmer"):
-                    msg += "   Razmer: " + s["razmer"] + "\n"
-                msg += "   Qoplama: " + s.get("qoplama", "") + "\n"
-                if s.get("miqdor_text"):
-                    msg += "   Miqdor: " + s["miqdor_text"] + "\n"
-                msg += "\n"
-            msg += "━━━━━━━━━━━━━━\n"
-            msg += "💰 Jami hisobni ko'rish uchun tugmani bosing:"
+                    mahsulot += " | " + s["razmer"]
+                miqdor = s.get("miqdor_text", "")
+                qoplama = s.get("qoplama", "")
+                jami = s.get("jami_narx", 0) or 0
+
+                msg = str(i+1) + ". " + mahsulot + "\n"
+                msg += "   Miqdor: " + miqdor + "\n"
+                msg += "   Qoplama: " + qoplama + "\n"
+                if jami:
+                    msg += "   Jami: " + format_narx(jami)
+
+                keyboard = [
+                    [
+                        InlineKeyboardButton("✏️ Miqdorni o'zgartir", callback_data="tahrir_" + str(i)),
+                        InlineKeyboardButton("❌ O'chir", callback_data="ochir_" + str(i)),
+                    ]
+                ]
+                await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
+
+            # Umumiy tugmalar
             keyboard = [
                 [InlineKeyboardButton("💰 Jami hisobni ko'rish (PDF)", callback_data="hisob_korsatish")],
                 [InlineKeyboardButton("🗑 Savatni tozalash", callback_data="savat_tozala")],
             ]
-            await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
+            await update.message.reply_text("━━━━━━━━━━━━━━\nYuqoridagi mahsulotlarni tahrirlash yoki buyurtma berish:", reply_markup=InlineKeyboardMarkup(keyboard))
         else:
             await update.message.reply_text("Savat bo'sh. Mahsulot tanlang!")
         return CHOOSING
@@ -581,10 +594,79 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         return MODEL_SELECTION
 
+    if query.data.startswith("ochir_"):
+        idx = int(query.data.replace("ochir_", ""))
+        if uid in savat and 0 <= idx < len(savat[uid]):
+            olingan = savat[uid].pop(idx)
+            mahsulot = olingan["category"] + " — " + olingan.get("model", "")
+            await query.message.reply_text("❌ O'chirildi: " + mahsulot)
+        return CHOOSING
+
+    if query.data.startswith("tahrir_"):
+        idx = int(query.data.replace("tahrir_", ""))
+        context.user_data["tahrir_idx"] = idx
+        if uid in savat and 0 <= idx < len(savat[uid]):
+            item = savat[uid][idx]
+            category = item.get("category", "")
+            rom_tur = item.get("rom_tur", "")
+            if category == "Rom bezaklari" and rom_tur:
+                await query.message.reply_text(
+                    "Yangi miqdorni kiriting (" + rom_tur + "):\nFaqat raqam yozing:"
+                )
+            else:
+                await query.message.reply_text(
+                    "Yangi miqdorni kiriting (metr):\nFaqat raqam yozing:"
+                )
+        return TAHRIR_MIQDOR
+
     if query.data == "savat_tozala":
         savat[uid] = []
         await query.message.reply_text("🗑 Savat tozalandi!")
         return CHOOSING
+
+    return CHOOSING
+
+
+async def tahrir_miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid = update.effective_user.id
+    text = update.message.text.strip()
+    idx = context.user_data.get("tahrir_idx", -1)
+
+    if uid not in savat or idx < 0 or idx >= len(savat[uid]):
+        await update.message.reply_text("Xato. Qaytadan urinib ko'ring.")
+        return CHOOSING
+
+    item = savat[uid][idx]
+    category = item.get("category", "")
+    model = item.get("model", "")
+    qoplama = item.get("qoplama", "Ha")
+    razmer = item.get("razmer", "")
+    rom_tur = item.get("rom_tur", "")
+
+    try:
+        yangi_miqdor = int(text)
+        birlik_narx = item.get("birlik_narx", 0) or 0
+
+        if category == "Rom bezaklari" and rom_tur:
+            yangi_jami = yangi_miqdor * birlik_narx
+            savat[uid][idx]["miqdor_text"] = str(yangi_miqdor) + " ta dona"
+            savat[uid][idx]["jami_narx"] = yangi_jami
+        else:
+            birlik_narx = get_birlik_narx(category, model, razmer, None, qoplama) or 0
+            yangi_jami = yangi_miqdor * birlik_narx
+            savat[uid][idx]["miqdor_text"] = str(yangi_miqdor) + " metr"
+            savat[uid][idx]["jami_narx"] = yangi_jami
+            savat[uid][idx]["birlik_narx"] = birlik_narx
+
+        await update.message.reply_text(
+            "✅ Yangilandi!\n\n" +
+            category + " — " + model + "\n" +
+            "Yangi miqdor: " + savat[uid][idx]["miqdor_text"] + "\n" +
+            "Jami: " + format_narx(yangi_jami)
+        )
+    except:
+        await update.message.reply_text("Iltimos, faqat raqam yozing!")
+        return TAHRIR_MIQDOR
 
     return CHOOSING
 
@@ -887,6 +969,7 @@ def main():
             CUSTOM_PHOTO: [MessageHandler(filters.PHOTO, custom_photo_received)],
             KONTAKT_ISM: [MessageHandler(filters.TEXT & ~filters.COMMAND, kontakt_ism_received)],
             KONTAKT_TEL: [MessageHandler(filters.TEXT & ~filters.COMMAND, kontakt_tel_received)],
+            TAHRIR_MIQDOR: [MessageHandler(filters.TEXT & ~filters.COMMAND, tahrir_miqdor_received)],
         },
         fallbacks=[CommandHandler("start", start)],
     )
