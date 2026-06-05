@@ -322,7 +322,16 @@ OLCHAM_SHABLONLAR = {
     "Kalvak": "O'lchamlarni kiriting:\nUzunligi: ___\nEni: ___\nQalinligi: ___\nSoni: ___",
 }
 
-CHOOSING, MODEL_SELECTION, QOPLAMA, RAZMER_TANLOV, ROM_TUR, ROM_SONI, ESHIK_SONI, MIQDOR, OLCHAM, LOYIHA_PHOTO, FASAD_PHOTO, CUSTOM_PHOTO, KONTAKT_ISM, KONTAKT_TEL, TAHRIR_MIQDOR = range(15)
+KAPITEL_NARXLAR = {
+    "25sm": 14000, "30sm": 16000, "35sm": 18000,
+    "40sm": 20000, "45sm": 22000, "50sm": 24000,
+}
+BAZA_NARXLAR = {
+    "25sm": 12000, "30sm": 14000, "35sm": 16000,
+    "40sm": 18000, "45sm": 20000, "50sm": 22000,
+}
+
+CHOOSING, MODEL_SELECTION, QOPLAMA, RAZMER_TANLOV, ROM_TUR, ROM_SONI, ESHIK_SONI, MIQDOR, OLCHAM, LOYIHA_PHOTO, FASAD_PHOTO, CUSTOM_PHOTO, KONTAKT_ISM, KONTAKT_TEL, TAHRIR_MIQDOR, KAPITEL_SONI, BAZA_SONI = range(17)
 
 orders = {}
 savat = {}
@@ -628,6 +637,22 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         return MODEL_SELECTION
 
+    if query.data == "kapitel_ha":
+        razmer = context.user_data.get("razmer", "25sm")
+        await query.message.reply_text(
+            "Necha dona KAPITEL kerak?\n"
+            "Faqat raqam yozing:\nMasalan: 4"
+        )
+        return KAPITEL_SONI
+
+    if query.data == "kapitel_yoq":
+        keyboard = [
+            [InlineKeyboardButton("🛒 Savatim", callback_data="savatim_kor")],
+            [InlineKeyboardButton("➕ Yana mahsulot qo'shish", callback_data="yana_qosh")],
+        ]
+        await query.message.reply_text("Yaxshi! Davom etamiz.", reply_markup=InlineKeyboardMarkup(keyboard))
+        return CHOOSING
+
     if query.data == "yana_qosh":
         category = context.user_data.get("category", "")
         if category in KATALOG_LINKS:
@@ -717,6 +742,82 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return CHOOSING
 
     return CHOOSING
+
+
+async def kapitel_soni_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid = update.effective_user.id
+    text = update.message.text.strip()
+    try:
+        soni = int(text)
+        context.user_data["kapitel_soni"] = soni
+        razmer = context.user_data.get("razmer", "25sm")
+        narx = KAPITEL_NARXLAR.get(razmer, 14000)
+        qoplama = context.user_data.get("qoplama", "Ha")
+        if qoplama == "Yo'q":
+            narx = narx // 2
+        context.user_data["kapitel_narx"] = narx
+
+        if uid not in savat:
+            savat[uid] = []
+        savat[uid].append({
+            "category": "Kapitel",
+            "model": "Kapitel",
+            "rom_tur": "",
+            "qoplama": qoplama,
+            "razmer": razmer,
+            "miqdor_text": str(soni) + " ta dona",
+            "jami_narx": soni * narx,
+            "birlik_narx": narx,
+        })
+        await update.message.reply_text(
+            "✅ Kapitel savatga qo'shildi!\n"
+            "En: " + razmer + " | " + str(soni) + " ta dona\n\n"
+            "Necha dona BAZA kerak?\n"
+            "Faqat raqam yozing:\nMasalan: 4"
+        )
+        return BAZA_SONI
+    except:
+        await update.message.reply_text("Iltimos, faqat raqam yozing!\nMasalan: 4")
+        return KAPITEL_SONI
+
+
+async def baza_soni_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid = update.effective_user.id
+    text = update.message.text.strip()
+    try:
+        soni = int(text)
+        razmer = context.user_data.get("razmer", "25sm")
+        narx = BAZA_NARXLAR.get(razmer, 12000)
+        qoplama = context.user_data.get("qoplama", "Ha")
+        if qoplama == "Yo'q":
+            narx = narx // 2
+
+        if uid not in savat:
+            savat[uid] = []
+        savat[uid].append({
+            "category": "Baza",
+            "model": "Baza",
+            "rom_tur": "",
+            "qoplama": qoplama,
+            "razmer": razmer,
+            "miqdor_text": str(soni) + " ta dona",
+            "jami_narx": soni * narx,
+            "birlik_narx": narx,
+        })
+
+        keyboard = [
+            [InlineKeyboardButton("🛒 Savatim", callback_data="savatim_kor")],
+            [InlineKeyboardButton("➕ Yana mahsulot qo'shish", callback_data="yana_qosh")],
+        ]
+        await update.message.reply_text(
+            "✅ Baza ham savatga qo'shildi!\n"
+            "En: " + razmer + " | " + str(soni) + " ta dona",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return CHOOSING
+    except:
+        await update.message.reply_text("Iltimos, faqat raqam yozing!\nMasalan: 4")
+        return BAZA_SONI
 
 
 async def tahrir_miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -941,6 +1042,32 @@ async def miqdor_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg += "🖌 Qoplama: " + qoplama + "\n"
     msg += "📐 Miqdor: " + miqdor_text
 
+    if category == "Ustunlar":
+        keyboard2 = [
+            [InlineKeyboardButton("✅ Ha, qo'shish kerak", callback_data="kapitel_ha")],
+            [InlineKeyboardButton("❌ Yo'q, kerak emas", callback_data="kapitel_yoq")],
+        ]
+        await update.message.reply_text(msg)
+        await update.message.reply_text(
+            "Kapitel va baza qo'shish kerakmi?\n\n"
+            "💰 Kapitel narxlari (qoplama bilan):\n"
+            "En 25sm — 14,000 so'm/dona\n"
+            "En 30sm — 16,000 so'm/dona\n"
+            "En 35sm — 18,000 so'm/dona\n"
+            "En 40sm — 20,000 so'm/dona\n"
+            "En 45sm — 22,000 so'm/dona\n"
+            "En 50sm — 24,000 so'm/dona\n\n"
+            "💰 Baza narxlari (qoplama bilan):\n"
+            "En 25sm — 12,000 so'm/dona\n"
+            "En 30sm — 14,000 so'm/dona\n"
+            "En 35sm — 16,000 so'm/dona\n"
+            "En 40sm — 18,000 so'm/dona\n"
+            "En 45sm — 20,000 so'm/dona\n"
+            "En 50sm — 22,000 so'm/dona",
+            reply_markup=InlineKeyboardMarkup(keyboard2)
+        )
+        return KAPITEL_SONI
+
     await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
     return CHOOSING
 
@@ -1058,6 +1185,8 @@ def main():
             KONTAKT_ISM: [MessageHandler(filters.TEXT & ~filters.COMMAND, kontakt_ism_received)],
             KONTAKT_TEL: [MessageHandler(filters.TEXT & ~filters.COMMAND, kontakt_tel_received)],
             TAHRIR_MIQDOR: [MessageHandler(filters.TEXT & ~filters.COMMAND, tahrir_miqdor_received)],
+            KAPITEL_SONI: [MessageHandler(filters.TEXT & ~filters.COMMAND, kapitel_soni_received), CallbackQueryHandler(button_handler)],
+            BAZA_SONI: [MessageHandler(filters.TEXT & ~filters.COMMAND, baza_soni_received)],
         },
         fallbacks=[CommandHandler("start", start)],
     )
