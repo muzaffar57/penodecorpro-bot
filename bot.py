@@ -349,6 +349,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [KeyboardButton("🏠 Fasad loyihasi tayyorlash")],
         [KeyboardButton("🏗️ Bajarilgan loyihalar")],
         [KeyboardButton("🌟 Keng qamrovlik yechim")],
+        [KeyboardButton("📞 Kontaktlar")],
         [KeyboardButton("🛒 Savatim"), KeyboardButton("💰 Jami hisob (PDF)")],
     ]
     markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -444,6 +445,22 @@ async def category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["category"] = text
         await update.message.reply_text("🏠 Fasad loyihasi tayyorlash\n\nUyingizning fasad rasmini yuboring va yoqtirgan modellarni yozing.")
         return FASAD_PHOTO
+
+    if text == "📞 Kontaktlar":
+        await update.message.reply_text(
+            "📞 BIZ BILAN BOG'LANING\n\n"
+            "📱 Telefon raqamlar:\n"
+            "+998 97 999 57 57\n"
+            "+998 90 623 22 72\n"
+            "+998 97 699 19 19\n\n"
+            "📍 Manzil:\n"
+            "Andijon shahar, 134-uy\n"
+            "Mo'ljal: Yog' zavodi orqa tomoni\n\n"
+            "🕐 Ish vaqti:\n"
+            "Dushanba — Shanba: 9:00 — 18:00\n\n"
+            "💬 Telegram: @PenoDecorPro"
+        )
+        return CHOOSING
 
     if text == "🏗️ Bajarilgan loyihalar":
         await update.message.reply_text("🏗️ Bajarilgan loyihalar:\n\nhttps://muzaffar57.github.io/-penodecor-katalog/loyihalar.html")
