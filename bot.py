@@ -1196,20 +1196,36 @@ async def eshik_soni_received(update: Update, context: ContextTypes.DEFAULT_TYPE
     if uid not in savat:
         savat[uid] = []
 
+    # Rom va eshikni alohida saqlash — model+tur+razmer kombinatsiyasi kalit
     if rom_soni > 0:
-        savat[uid].append({
+        rom_key = f"{model}_rom_{razmer}"
+        # Agar avval shu model-tur bor bo'lsa — yangilash, yo'q bo'lsa — qo'shish
+        ex_rom = next((idx for idx, s in enumerate(savat[uid])
+                       if s.get("model") == model and s.get("rom_tur") == "Rom bezak" and s.get("razmer") == razmer), None)
+        rom_item = {
             "category": "Rom bezaklari", "model": model,
             "rom_tur": "Rom bezak", "qoplama": qoplama, "razmer": razmer,
             "miqdor_text": str(rom_soni) + " ta dona",
             "jami_narx": rom_soni * rom_narx, "birlik_narx": rom_narx,
-        })
+        }
+        if ex_rom is not None:
+            savat[uid][ex_rom] = rom_item
+        else:
+            savat[uid].append(rom_item)
+
     if eshik_soni > 0:
-        savat[uid].append({
+        ex_eshik = next((idx for idx, s in enumerate(savat[uid])
+                         if s.get("model") == model and s.get("rom_tur") == "Eshik bezak" and s.get("razmer") == razmer), None)
+        eshik_item = {
             "category": "Rom bezaklari", "model": model,
             "rom_tur": "Eshik bezak", "qoplama": qoplama, "razmer": razmer,
             "miqdor_text": str(eshik_soni) + " ta dona",
             "jami_narx": eshik_soni * eshik_narx, "birlik_narx": eshik_narx,
-        })
+        }
+        if ex_eshik is not None:
+            savat[uid][ex_eshik] = eshik_item
+        else:
+            savat[uid].append(eshik_item)
 
     jami = rom_soni * rom_narx + eshik_soni * eshik_narx
 
@@ -1282,6 +1298,14 @@ async def kontakt_tel_received(update: Update, context: ContextTypes.DEFAULT_TYP
                     filename="PenoDecorPro_buyurtma.pdf",
                     caption="📄 Yangi buyurtma PDF!\n👤 " + ism + "\n📞 " + tel
                 )
+            # Mijozga ham PDF yuborish
+            pdf_bytes2 = create_pdf_bytes(ism + " | " + tel, savat[uid])
+            await context.bot.send_document(
+                chat_id=uid,
+                document=pdf_bytes2,
+                filename="PenoDecorPro_buyurtma.pdf",
+                caption="📄 Sizning buyurtmangiz hisob-kitobi\n✅ Buyurtma qabul qilindi!"
+            )
         except Exception as e:
             logger.error("PDF xato: " + str(e))
 
