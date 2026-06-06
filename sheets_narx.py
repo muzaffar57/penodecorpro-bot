@@ -106,6 +106,7 @@ ZAXIRA_NARXLAR = {
     "Ustun_45sm_baza": 29800, "Ustun_45sm_ustama": 4800,
     "Ustun_50sm_baza": 33000, "Ustun_50sm_ustama": 5500,
     "Ustun qalinlik ustamasi": 6000,
+    "Xomashyo_kuba_baza": 1200000,
     "Kalvak kub metr baza": 4000000,
     "Barelyef kub metr baza": 5000000,
 }
