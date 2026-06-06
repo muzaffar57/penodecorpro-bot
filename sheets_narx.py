@@ -95,6 +95,13 @@ ZAXIRA_NARXLAR = {
     "Yumaloq ustun oq ustama": 3200,
     "Kapitel baza": 80000,
     "Kapitel ustama": 4000,
+    "Ustun_25sm_baza": 16500, "Ustun_25sm_ustama": 2700,
+    "Ustun_30sm_baza": 19800, "Ustun_30sm_ustama": 3300,
+    "Ustun_35sm_baza": 23000, "Ustun_35sm_ustama": 3900,
+    "Ustun_40sm_baza": 26500, "Ustun_40sm_ustama": 4300,
+    "Ustun_45sm_baza": 29800, "Ustun_45sm_ustama": 4800,
+    "Ustun_50sm_baza": 33000, "Ustun_50sm_ustama": 5500,
+    "Ustun qalinlik ustamasi": 6000,
     "Kalvak kub metr baza": 4000000,
     "Barelyef kub metr baza": 5000000,
 }
