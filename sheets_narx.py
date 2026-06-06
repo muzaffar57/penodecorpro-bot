@@ -93,8 +93,8 @@ ZAXIRA_NARXLAR = {
     "Yumaloq ustun ustama": 23000,
     "Yumaloq ustun oq baza": 53000,
     "Yumaloq ustun oq ustama": 3200,
-    "Kapitel baza": 30000,
-    "Kapitel ustama": 1500,
+    "Kapitel baza": 80000,
+    "Kapitel ustama": 4000,
     "Kalvak kub metr baza": 4000000,
     "Barelyef kub metr baza": 5000000,
 }
