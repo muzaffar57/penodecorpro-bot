@@ -160,14 +160,12 @@ def create_pdf_bytes(mijoz_ism, savat_items):
             logo_img = ImageReader(io.BytesIO(logo_data))
             canvas_obj.drawImage(logo_img, 1.5*cm, h - 3.2*cm, width=2.2*cm, height=2.2*cm, preserveAspectRatio=True, mask='auto')
         except:
-            # Logo yuklanmasa qizil doira chiqsin
             canvas_obj.setFillColor(colors.HexColor("#E74C3C"))
             canvas_obj.circle(3*cm, h - 1.75*cm, 1.1*cm, fill=1, stroke=0)
             canvas_obj.setFillColor(colors.white)
             canvas_obj.setFont("Helvetica-Bold", 22)
             canvas_obj.drawCentredString(3*cm, h - 2.1*cm, "P")
 
-        # Kompaniya nomi
         canvas_obj.setFillColor(colors.white)
         canvas_obj.setFont("Helvetica-Bold", 20)
         canvas_obj.drawString(4.5*cm, h - 1.5*cm, "PenoDecorPro")
@@ -175,14 +173,12 @@ def create_pdf_bytes(mijoz_ism, savat_items):
         canvas_obj.setFont("Helvetica", 9)
         canvas_obj.drawString(4.5*cm, h - 2.1*cm, "Fasad bezaklari ishlab chiqarish")
 
-        # Telefonlar
         canvas_obj.setFillColor(colors.HexColor("#ECF0F1"))
         canvas_obj.setFont("Helvetica", 8)
         canvas_obj.drawRightString(w - 2*cm, h - 1.2*cm, "+998 97 999 57 57")
         canvas_obj.drawRightString(w - 2*cm, h - 1.7*cm, "+998 90 623 22 72")
         canvas_obj.drawRightString(w - 2*cm, h - 2.2*cm, "+998 97 699 19 19")
 
-        # Sariq chiziq
         canvas_obj.setFillColor(colors.HexColor("#F39C12"))
         canvas_obj.rect(0, h - 3.5*cm, w, 0.15*cm, fill=1, stroke=0)
 
@@ -244,60 +240,120 @@ def create_pdf_bytes(mijoz_ism, savat_items):
     story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#BDC3C7")))
     story.append(Spacer(1, 0.3*cm))
 
-    table_data = [["#", "Mahsulot", "Miqdor", "Birlik narx", "Jami"]]
+    # ===== JADVAL =====
+    table_data = [["#", "Mahsulot tavsifi", "O'lchov / Tur", "Miqdor", "Birlik narx", "Jami"]]
     jami_umumiy = 0
 
+    def is_nostandart(item):
+        """WebApp dan kelgan nostandart mahsulotni aniqlash."""
+        nom = (item.get("mahsulot", "") + item.get("category", "") + item.get("name", "")).lower()
+        return any(x in nom for x in ["yumaloq ustun", "kolonna", "kapitel", "baza", "kalvak", "barelyef", "kronshteyn"])
+
     for i, item in enumerate(savat_items, 1):
-        category = item.get("category", "")
-        model = item.get("model", "")
-        razmer = item.get("razmer", "")
-        qoplama = item.get("qoplama", "")
-        rom_tur = item.get("rom_tur", "")
-        miqdor_text = item.get("miqdor_text", "")
-        jami_narx = item.get("jami_narx", 0) or 0
-        birlik_narx = item.get("birlik_narx", 0) or 0
+        # WebApp dan kelgan nostandart mahsulot
+        nom_raw = item.get("mahsulot", item.get("name", item.get("category", "")))
+        nom_lower = nom_raw.lower()
+        razmer_raw = item.get("razmer", item.get("razmer_text", ""))
+        miqdor_raw = item.get("miqdor", item.get("miqdor_text", "1 dona"))
+        birlik_narx = item.get("birlik_narx", item.get("birlik_narx", 0)) or 0
+        jami_narx = item.get("jami", item.get("jami_narx", 0)) or 0
 
-        mahsulot = category + "\n" + model
-        if rom_tur:
-            mahsulot += " | " + rom_tur
-        if razmer:
-            mahsulot += "\n" + razmer
-        if qoplama:
-            mahsulot += " | Qoplama: " + qoplama
+        # ===== YUMALOQ USTUN =====
+        if "yumaloq ustun" in nom_lower or "kolonna" in nom_lower:
+            # razmer: "D:30sm, H:3m, Premium 180°..."
+            tavsif = "Yumaloq ustun (Kolonna)"
+            olcham_tur = razmer_raw
+            miqdor_col = "1 dona"
+            birlik_col = format_narx(int(jami_narx)) if jami_narx else "-"
+            jami_col = format_narx(int(jami_narx)) if jami_narx else "Hisoblanadi"
 
-        jami_umumiy += jami_narx
+        # ===== KAPITEL / BAZA =====
+        elif "kapitel" in nom_lower or ("baza" in nom_lower and "yumaloq" not in nom_lower):
+            tavsif = "Kapitel / Baza"
+            olcham_tur = razmer_raw
+            miqdor_col = miqdor_raw
+            birlik_col = "-"
+            jami_col = format_narx(int(jami_narx)) if jami_narx else "Hisoblanadi"
+
+        # ===== KALVAK =====
+        elif "kalvak" in nom_lower or "kronshteyn" in nom_lower:
+            tavsif = "Kalvak (Kronshteyn)"
+            olcham_tur = razmer_raw
+            miqdor_col = miqdor_raw
+            birlik_col = "-"
+            jami_col = format_narx(int(jami_narx)) if jami_narx else "Hisoblanadi"
+
+        # ===== BARELYEF =====
+        elif "barelyef" in nom_lower or "barelef" in nom_lower:
+            tavsif = "Barelyef"
+            olcham_tur = razmer_raw
+            miqdor_col = miqdor_raw
+            birlik_col = "-"
+            jami_col = format_narx(int(jami_narx)) if jami_narx else "Hisoblanadi"
+
+        # ===== STANDART MAHSULOTLAR (bot savati) =====
+        else:
+            category = item.get("category", nom_raw)
+            model = item.get("model", "")
+            razmer = item.get("razmer", razmer_raw)
+            qoplama = item.get("qoplama", "")
+            rom_tur = item.get("rom_tur", "")
+
+            tavsif = category
+            if model:
+                tavsif += "\n" + model
+
+            olcham_parts = []
+            if rom_tur:
+                olcham_parts.append(rom_tur)
+            if razmer:
+                olcham_parts.append(razmer)
+            if qoplama:
+                olcham_parts.append("Qoplama: " + qoplama)
+            olcham_tur = " | ".join(olcham_parts) if olcham_parts else "-"
+
+            miqdor_col = miqdor_raw
+            birlik_col = format_narx(birlik_narx) if birlik_narx else "-"
+            jami_col = format_narx(int(jami_narx)) if jami_narx else "Hisoblanadi"
+
+        jami_umumiy += int(jami_narx)
         table_data.append([
-            str(i), mahsulot, miqdor_text,
-            format_narx(birlik_narx) if birlik_narx else "-",
-            format_narx(jami_narx) if jami_narx else "Hisoblanadi"
+            str(i),
+            tavsif,
+            olcham_tur,
+            miqdor_col,
+            birlik_col,
+            jami_col
         ])
 
-    table_data.append(["", "", "", "UMUMIY JAMI:", format_narx(jami_umumiy) if jami_umumiy else "Hisoblanadi"])
+    table_data.append(["", "", "", "", "UMUMIY JAMI:", format_narx(jami_umumiy) if jami_umumiy else "Hisoblanadi"])
 
-    col_widths = [0.8*cm, 7*cm, 3.5*cm, 3.2*cm, 3.5*cm]
+    col_widths = [0.7*cm, 4.8*cm, 4.2*cm, 2.3*cm, 2.8*cm, 3.2*cm]
     prod_table = Table(table_data, colWidths=col_widths, repeatRows=1)
     prod_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#1A252F")),
         ('TEXTCOLOR', (0,0), (-1,0), colors.white),
         ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,0), (-1,0), 9),
+        ('FONTSIZE', (0,0), (-1,0), 8),
         ('ALIGN', (0,0), (-1,0), 'CENTER'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('TOPPADDING', (0,0), (-1,0), 8),
-        ('BOTTOMPADDING', (0,0), (-1,0), 8),
+        ('TOPPADDING', (0,0), (-1,0), 7),
+        ('BOTTOMPADDING', (0,0), (-1,0), 7),
         ('FONTNAME', (0,1), (-1,-2), 'Helvetica'),
-        ('FONTSIZE', (0,1), (-1,-1), 8.5),
+        ('FONTSIZE', (0,1), (-1,-1), 7.5),
         ('ROWBACKGROUNDS', (0,1), (-1,-2), [colors.white, colors.HexColor("#F8F9FA")]),
         ('GRID', (0,0), (-1,-2), 0.5, colors.HexColor("#DEE2E6")),
-        ('TOPPADDING', (0,1), (-1,-1), 6),
-        ('BOTTOMPADDING', (0,1), (-1,-1), 6),
-        ('LEFTPADDING', (1,1), (1,-1), 6),
+        ('TOPPADDING', (0,1), (-1,-1), 5),
+        ('BOTTOMPADDING', (0,1), (-1,-1), 5),
+        ('LEFTPADDING', (0,0), (-1,-1), 4),
+        ('RIGHTPADDING', (0,0), (-1,-1), 4),
         ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor("#EBF5FB")),
         ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,-1), (-1,-1), 10),
-        ('TEXTCOLOR', (3,-1), (-1,-1), colors.HexColor("#E74C3C")),
+        ('FONTSIZE', (0,-1), (-1,-1), 9),
+        ('TEXTCOLOR', (4,-1), (-1,-1), colors.HexColor("#E74C3C")),
         ('LINEABOVE', (0,-1), (-1,-1), 2, colors.HexColor("#1A252F")),
         ('ALIGN', (2,1), (-1,-1), 'CENTER'),
+        ('ALIGN', (0,0), (0,-1), 'CENTER'),
     ]))
     story.append(prod_table)
     story.append(Spacer(1, 0.5*cm))
@@ -1381,45 +1437,181 @@ async def custom_photo_received(update: Update, context: ContextTypes.DEFAULT_TY
 
 
 async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """WebApp dan kelgan buyurtmani qabul qilish."""
+    """WebApp dan kelgan buyurtmani chiroyli formatda qabul qilish."""
     import json
+    from datetime import timezone, timedelta
     user = update.effective_user
     data_str = update.effective_message.web_app_data.data
+
     try:
         data = json.loads(data_str)
         savat_items = data.get("savat", [])
-        jami = data.get("jami_summa", 0)
+        jami_summa = data.get("jami_summa", 0)
+        qoplama_holati = data.get("qoplama_holati", "Qoplamali")
 
         if not savat_items:
-            await update.message.reply_text("Savat bo'sh!")
+            await update.message.reply_text("❌ Savat bo'sh!")
             return
 
-        # Foydalanuvchiga xabar
-        msg = "✅ Buyurtmangiz qabul qilindi!\n\n"
+        uzb_tz = timezone(timedelta(hours=5))
+        vaqt = datetime.now(uzb_tz).strftime("%d.%m.%Y %H:%M")
+
+        def fmt(n):
+            return f"{int(n):,}".replace(",", " ") + " so'm"
+
+        def format_item(i, item):
+            nom = item.get("mahsulot", "")
+            razmer = item.get("razmer", "")
+            miqdor = item.get("miqdor", "")
+            birlik = item.get("birlik_narx", 0)
+            jami = item.get("jami", 0)
+
+            nom_lower = nom.lower()
+
+            # Yumaloq ustun
+            if "yumaloq ustun" in nom_lower or "kolonna" in nom_lower:
+                return (
+                    f"{i}. 🏛️ <b>Yumaloq ustun</b>\n"
+                    f"   📐 {razmer}\n"
+                    f"   💰 Jami: <b>{fmt(jami)}</b>\n"
+                )
+
+            # Kapitel / Baza
+            elif "kapitel" in nom_lower or "baza" in nom_lower:
+                return (
+                    f"{i}. 🏛️ <b>Kapitel / Baza</b>\n"
+                    f"   📐 {razmer}\n"
+                    f"   📦 {miqdor}\n"
+                    f"   💰 Jami: <b>{fmt(jami)}</b>\n"
+                )
+
+            # Kalvak
+            elif "kalvak" in nom_lower or "kronshteyn" in nom_lower:
+                return (
+                    f"{i}. 🔩 <b>Kalvak (Kronshteyn)</b>\n"
+                    f"   📐 O'lcham: {razmer}\n"
+                    f"   📦 {miqdor}\n"
+                    f"   💰 Jami: <b>{fmt(jami)}</b>\n"
+                )
+
+            # Barelyef
+            elif "barelyef" in nom_lower:
+                return (
+                    f"{i}. 🌸 <b>Barelyef</b>\n"
+                    f"   📐 O'lcham: {razmer}\n"
+                    f"   📦 {miqdor}\n"
+                    f"   💰 Jami: <b>{fmt(jami)}</b>\n"
+                )
+
+            # Karniz
+            elif "karniz" in nom_lower:
+                return (
+                    f"{i}. 📐 <b>{nom}</b>\n"
+                    f"   📏 Razmer: {razmer}\n"
+                    f"   🖌 Qoplama: {qoplama_holati}\n"
+                    f"   📦 {miqdor} × {fmt(birlik)}\n"
+                    f"   💰 Jami: <b>{fmt(jami)}</b>\n"
+                )
+
+            # Belbog
+            elif "belbog" in nom_lower:
+                return (
+                    f"{i}. 🎀 <b>{nom}</b>\n"
+                    f"   📏 Razmer: {razmer}\n"
+                    f"   🖌 Qoplama: {qoplama_holati}\n"
+                    f"   📦 {miqdor} × {fmt(birlik)}\n"
+                    f"   💰 Jami: <b>{fmt(jami)}</b>\n"
+                )
+
+            # Rom bezak
+            elif "rom" in nom_lower:
+                return (
+                    f"{i}. 🪟 <b>{nom}</b>\n"
+                    f"   📏 Tur: {razmer}\n"
+                    f"   🖌 Qoplama: {qoplama_holati}\n"
+                    f"   📦 {miqdor} × {fmt(birlik)}\n"
+                    f"   💰 Jami: <b>{fmt(jami)}</b>\n"
+                )
+
+            # Devorga ramka
+            elif "ramka" in nom_lower:
+                return (
+                    f"{i}. 🔲 <b>{nom}</b>\n"
+                    f"   🖌 Qoplama: {qoplama_holati}\n"
+                    f"   📦 {miqdor} × {fmt(birlik)}\n"
+                    f"   💰 Jami: <b>{fmt(jami)}</b>\n"
+                )
+
+            # Boshqa
+            else:
+                return (
+                    f"{i}. 📦 <b>{nom}</b>\n"
+                    f"   📐 {razmer}\n"
+                    f"   📦 {miqdor}\n"
+                    f"   💰 Jami: <b>{fmt(jami)}</b>\n"
+                )
+
+        # ===== FOYDALANUVCHIGA XABAR =====
+        user_link = f'<a href="tg://user?id={user.id}">{user.first_name}</a>'
+        mijoz_msg = (
+            f"✅ <b>Buyurtmangiz qabul qilindi!</b>\n"
+            f"🕐 {vaqt}\n\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+        )
         for i, item in enumerate(savat_items, 1):
-            msg += f"{i}. {item['mahsulot']}\n"
-            msg += f"   📐 {item['miqdor']}\n"
-            msg += f"   💰 {item['jami']:,} so'm\n\n"
-        msg += f"💵 Jami: {jami:,} so'm\n\n"
-        msg += "Tez orada menejer siz bilan bog'lanadi!"
+            mijoz_msg += format_item(i, item)
+            mijoz_msg += "─────────────────\n"
 
-        await update.message.reply_text(msg)
+        mijoz_msg += (
+            f"\n💵 <b>Umumiy hisob: {fmt(jami_summa)}</b>\n\n"
+            f"📞 Tez orada menejer siz bilan bog'lanadi!\n"
+            f"Savollar uchun: @penodecorprouz"
+        )
+        await update.message.reply_text(mijoz_msg, parse_mode="HTML")
 
-        # Adminga xabar
-        admin_msg = f"🆕 WEBAPP BUYURTMA!\n\n"
-        admin_msg += f"👤 {user.first_name}"
-        if user.username:
-            admin_msg += f" (@{user.username})"
-        admin_msg += f"\n🆔 {user.id}\n\n"
+        # ===== ADMINGA XABAR =====
+        user_mention = f'<a href="tg://user?id={user.id}">{user.first_name}</a>'
+        username_str = f" (@{user.username})" if user.username else ""
+
+        admin_msg = (
+            f"🛒 <b>YANGI BUYURTMA (PenoDecorPro)</b>\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"👤 Buyurtmachi: {user_mention}{username_str}\n"
+            f"🆔 ID: <code>{user.id}</code>\n"
+            f"🕐 Vaqt: {vaqt}\n"
+            f"━━━━━━━━━━━━━━━━━━\n\n"
+        )
         for i, item in enumerate(savat_items, 1):
-            admin_msg += f"{i}. {item['mahsulot']} — {item['miqdor']} — {item['jami']:,} so'm\n"
-        admin_msg += f"\n💵 JAMI: {jami:,} so'm"
+            admin_msg += format_item(i, item)
+            admin_msg += "─────────────────\n"
 
-        await context.bot.send_message(chat_id=ADMIN_ID, text=admin_msg)
+        admin_msg += (
+            f"\n💵 <b>UMUMIY HISOB: {fmt(jami_summa)}</b>\n\n"
+            f"👇 Mijoz bilan bog'lanish uchun pastdagi tugmani bosing:"
+        )
 
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(
+                f"📞 {user.first_name} bilan bog'lanish",
+                url=f"tg://user?id={user.id}"
+            )]
+        ])
+
+        await context.bot.send_message(
+            chat_id=ADMIN_ID,
+            text=admin_msg,
+            parse_mode="HTML",
+            reply_markup=keyboard
+        )
+
+        logger.info(f"WebApp buyurtma: {user.id} — {fmt(jami_summa)}")
+
+    except json.JSONDecodeError as e:
+        logger.error(f"WebApp JSON xato: {e}")
+        await update.message.reply_text("❌ Ma'lumot xato formatda keldi. Qayta urinib ko'ring.")
     except Exception as e:
         logger.error(f"WebApp xato: {e}")
-        await update.message.reply_text("Xato yuz berdi. Qayta urinib ko'ring.")
+        await update.message.reply_text("❌ Xato yuz berdi. Qayta urinib ko'ring.")
 
 
 async def send_all_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
