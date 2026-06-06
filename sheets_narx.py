@@ -88,6 +88,15 @@ ZAXIRA_NARXLAR = {
     "Kapitel_40sm": 20000, "Kapitel_45sm": 22000, "Kapitel_50sm": 24000,
     "Baza_25sm": 12000, "Baza_30sm": 14000, "Baza_35sm": 16000,
     "Baza_40sm": 18000, "Baza_45sm": 20000, "Baza_50sm": 22000,
+    # Nostandart mahsulotlar
+    "Yumaloq ustun baza": 75000,
+    "Yumaloq ustun ustama": 23000,
+    "Yumaloq ustun oq baza": 53000,
+    "Yumaloq ustun oq ustama": 3200,
+    "Kapitel baza": 30000,
+    "Kapitel ustama": 1500,
+    "Kalvak kub metr baza": 4000000,
+    "Barelyef kub metr baza": 5000000,
 }
 
 _kesh = {"narxlar": None, "vaqt": 0, "muddat": 300}
