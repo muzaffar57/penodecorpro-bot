@@ -260,11 +260,26 @@ def create_pdf_bytes(mijoz_ism, savat_items):
 
         # ===== YUMALOQ USTUN =====
         if "yumaloq ustun" in nom_lower or "kolonna" in nom_lower:
-            # razmer: "D:30sm, H:3m, Premium 180°..."
-            tavsif = "Yumaloq ustun (Kolonna)"
-            olcham_tur = razmer_raw
-            miqdor_col = "1 dona"
-            birlik_col = format_narx(int(jami_narx)) if jami_narx else "-"
+            # razmer: "D:30sm, H:3m, Qoplamali (Premium 180° qolip)"
+            d_val, h_val, qop_val = "", "", ""
+            for part in razmer_raw.split(","):
+                part = part.strip()
+                if part.startswith("D:"):
+                    d_val = part.replace("D:","").strip()
+                elif part.startswith("H:"):
+                    h_val = part.replace("H:","").strip()
+                else:
+                    qop_val = part.strip()
+            try:
+                h_num = float(h_val.replace("m",""))
+                metr_narx = int(jami_narx / h_num) if h_num else 0
+            except:
+                metr_narx = 0
+            # Mahsulot tavsifi = Diametr + Qoplama turi
+            tavsif = f"Yumaloq ustun\nD: {d_val} | {qop_val}"
+            olcham_tur = h_val if h_val else "-"   # Necha metr
+            miqdor_col = format_narx(metr_narx)+"/m" if metr_narx else "-"  # 1m narxi
+            birlik_col = "-"
             jami_col = format_narx(int(jami_narx)) if jami_narx else "Hisoblanadi"
 
         # ===== KAPITEL / BAZA =====
