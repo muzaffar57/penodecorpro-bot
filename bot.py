@@ -1707,6 +1707,19 @@ async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text("❌ Xato yuz berdi. Qayta urinib ko'ring.")
 
 
+async def send_all_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin rassilka boshlaydi."""
+    if update.effective_user.id != ADMIN_ID:
+        return
+    soni = foydalanuvchilar_soni()
+    await update.message.reply_text(
+        f"📢 Rassilka rejimi\n\n"
+        f"Hozir bazada {soni} ta foydalanuvchi bor.\n\n"
+        f"Yubormoqchi bo'lgan xabaringizni kiriting:\n"
+        f"(Matn, rasm yoki video bo'lishi mumkin)"
+    )
+    context.user_data['rassilka_rejim'] = True
+
 # ===== PDF BUYURTMA CALLBACK =====
 PDF_ISM, PDF_TEL = range(200, 202)
 
