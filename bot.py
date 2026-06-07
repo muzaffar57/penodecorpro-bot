@@ -102,7 +102,7 @@ BELBOG_NARXLAR = {
 }
 
 from sheets_narx import narx_ol, narxlarni_yangilash, chegirma_ol
-from database import init_db, foydalanuvchi_qoshish, barcha_userlar, foydalanuvchilar_soni
+from database import init_db, foydalanuvchi_qoshish, barcha_userlar, foydalanuvchilar_soni, savat_saqlash, savat_yuklash, savat_tozalash
 
 def get_birlik_narx(category, model, razmer, tur=None, qoplama="Ha"):
     narx = None
@@ -1469,6 +1469,27 @@ async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYP
 
     try:
         data = json.loads(data_str)
+        amal = data.get("amal", "buyurtma")
+
+        # ===== SAVAT SAQLASH =====
+        if amal == "savat_saqlash":
+            items = data.get("savat", [])
+            savat_saqlash(user.id, items)
+            await update.message.reply_text(
+                f"✅ Savatingiz saqlandi ({len(items)} ta mahsulot).\n"
+                f"WebApp qaytadan ochilganda savat tiklanadi."
+            )
+            return
+
+        # ===== SAVAT YUKLASH =====
+        if amal == "savat_yuklash":
+            items = savat_yuklash(user.id)
+            import json as js
+            await update.message.reply_text(
+                f"SAVAT_DATA:{js.dumps(items, ensure_ascii=False)}"
+            )
+            return
+
         savat_items = data.get("savat", [])
         jami_summa = data.get("jami_summa", 0)
         qoplama_holati = data.get("qoplama_holati", "Qoplamali")
@@ -1629,6 +1650,8 @@ async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYP
         )
 
         logger.info(f"WebApp buyurtma: {user.id} — {fmt(jami_summa)}")
+        # Buyurtma muvaffaqiyatli — savatni bazadan tozalash
+        savat_tozalash(user.id)
 
     except json.JSONDecodeError as e:
         logger.error(f"WebApp JSON xato: {e}")
