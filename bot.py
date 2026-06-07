@@ -325,7 +325,7 @@ def create_pdf_bytes(mijoz_ism, savat_items):
                 elif part.startswith("H:"): h_val = part.replace("H:","").strip()
                 else: qop_val = part.strip()
             # Qoplama matnini tozalash
-            qop_clean = "qoplama" if any(x in qop_val.lower() for x in ["qoplama", "premium"]) else "qoplamasiz"
+            qop_clean = "qoplamasiz" if "siz" in qop_val.lower() or "ekonom" in qop_val.lower() else ("qoplama" if qop_val else "-")
             try:
                 h_num = float(h_val.replace("m",""))
                 metr_narx = int(jami_narx / h_num) if h_num else 0
@@ -342,7 +342,7 @@ def create_pdf_bytes(mijoz_ism, savat_items):
         # ===== KAPITEL / BAZA =====
         elif "kapitel" in nom_lower or ("baza" in nom_lower and "yumaloq" not in nom_lower):
             tavsif = format_model_nom(nom_raw, razmer_raw)
-            qop_clean = "qoplama" if qoplama_turi and "qoplama" in qoplama_turi.lower() else "qoplamasiz"
+            qop_clean = "qoplamasiz" if qoplama_turi and "siz" in qoplama_turi.lower() else ("qoplama" if qoplama_turi else "-")
             jami_umumiy += int(jami_narx)
             table_data.append([str(i), tavsif, qop_clean, miqdor_num, "TA",
                                 format_narx(birlik_narx) if birlik_narx else "-",
@@ -368,7 +368,7 @@ def create_pdf_bytes(mijoz_ism, savat_items):
         elif "rom" in nom_lower:
             import re as re2
             komplekt = "Katta" if "Katta" in nom_raw else "Kichik"
-            qop_clean = "qoplama" if qoplama_turi and "qoplama" in qoplama_turi.lower() else "qoplamasiz"
+            qop_clean = "qoplamasiz" if qoplama_turi and "siz" in qoplama_turi.lower() else ("qoplama" if qoplama_turi else "-")
             model_m = re2.search(r'Model-(\d+)', nom_raw)
             model_num = int(model_m.group(1)) if model_m else 1
             model_kod = f"Rom-{model_num:02d}"
@@ -424,7 +424,7 @@ def create_pdf_bytes(mijoz_ism, savat_items):
         # ===== STANDART: KARNIZ, BELBOG, RAMKA, PLYASTR =====
         else:
             tavsif = format_model_nom(nom_raw, razmer_raw)
-            qop_clean = "qoplama" if qoplama_turi and "qoplama" in qoplama_turi.lower() else "qoplamasiz"
+            qop_clean = "qoplamasiz" if qoplama_turi and "siz" in qoplama_turi.lower() else ("qoplama" if qoplama_turi else "-")
             jami_umumiy += int(jami_narx)
             table_data.append([str(i), tavsif, qop_clean, miqdor_num, birlik_txt,
                                 format_narx(birlik_narx) if birlik_narx else "-",
