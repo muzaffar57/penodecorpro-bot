@@ -299,27 +299,67 @@ def create_pdf_bytes(mijoz_ism, savat_items):
             qoplama = item.get("qoplama", "")
             rom_tur = item.get("rom_tur", "")
 
-            # Rom bezak uchun maxsus format
+            # Rom bezak uchun maxsus format — har detal alohida qator
             if "rom" in nom_raw.lower():
-                tavsif = nom_raw  # "Rom bezagi Model-09 (Katta komplekt)"
-                # razmer: "Nalichnik:30m | Karniz:20m | Padakolnik:18m | Korona:0 | Kalvak:8"
-                detallar = []
-                if razmer:
-                    for q in razmer.split(" | "):
+                # nom_raw: "Rom bezagi Model-09 (Katta komplekt)"
+                # razmer: "Nalichnik:30m | Karniz:20m | Padakolnik:18m | Korona:4 | Kalvak:8"
+                # Komplekt nomi ajratib olinadi
+                komplekt = ""
+                if "Katta" in nom_raw:
+                    komplekt = "Katta"
+                elif "Kichik" in nom_raw:
+                    komplekt = "Kichik"
+                model_nom = nom_raw.replace(" (Katta komplekt)","").replace(" (Kichik komplekt)","")
+
+                # Har bir detalni alohida qator qilamiz
+                detal_rows = []
+                if razmer_raw:
+                    for q in razmer_raw.split(" | "):
                         q = q.strip()
-                        if not q or "Qoplama" in q or "yaxl" in q:
+                        if not q or "yaxl" in q:
                             continue
-                        val = q.split(":")[-1].strip().replace("m","").replace("dona","").strip()
+                        parts = q.split(":")
+                        if len(parts) < 2:
+                            continue
+                        detal_nom = parts[0].strip()
+                        detal_val = parts[1].strip()
+                        # Nol bo'lganlarni o'tkazib yuborish
                         try:
-                            if float(val) == 0:
+                            clean_val = detal_val.replace("m","").replace("dona","").strip()
+                            if float(clean_val) == 0:
                                 continue
                         except:
                             pass
-                        detallar.append(q)
-                olcham_tur = "\n".join([f"{n+1}. {d}" for n,d in enumerate(detallar)])
-                miqdor_col = "1 komplekt"
-                birlik_col = "-"
-                jami_col = format_narx(int(jami_narx)) if jami_narx else "Hisoblanadi"
+                        detal_rows.append((detal_nom, detal_val, komplekt))
+
+                if detal_rows:
+                    # Birinchi detal — nomeri bilan
+                    dn, dv, dk = detal_rows[0]
+                    jami_umumiy += int(jami_narx)
+                    table_data.append([
+                        str(i),
+                        f"{model_nom}\n{dn} ({dk})",
+                        dv,
+                        "-",
+                        "-",
+                        ""
+                    ])
+                    # Qolgan detallar — nomersiz, jami eng oxirgisida
+                    for idx, (dn, dv, dk) in enumerate(detal_rows[1:]):
+                        is_last = (idx == len(detal_rows) - 2)
+                        table_data.append([
+                            "",
+                            f"{model_nom}\n{dn} ({dk})",
+                            dv,
+                            "-",
+                            "-",
+                            format_narx(int(jami_narx)) if is_last else ""
+                        ])
+                else:
+                    jami_umumiy += int(jami_narx)
+                    table_data.append([str(i), nom_raw, razmer_raw, "1 set", "-",
+                                       format_narx(int(jami_narx)) if jami_narx else "-"])
+                continue  # table_data.append ni o'tkazib yuborish
             else:
                 tavsif = category
                 if model:
