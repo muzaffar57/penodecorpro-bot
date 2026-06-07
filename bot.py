@@ -324,39 +324,62 @@ def create_pdf_bytes(mijoz_ism, savat_items):
                 if part.startswith("D:"): d_val = part.replace("D:","").strip()
                 elif part.startswith("H:"): h_val = part.replace("H:","").strip()
                 else: qop_val = part.strip()
+            # Qoplama matnini tozalash
+            qop_clean = "qoplama" if any(x in qop_val.lower() for x in ["qoplama", "premium"]) else "qoplamasiz"
             try:
                 h_num = float(h_val.replace("m",""))
                 metr_narx = int(jami_narx / h_num) if h_num else 0
             except:
                 metr_narx = 0
-            tavsif = f"Yumaloq ustun\nD: {d_val}"
+            # Tavsif: faqat "Yumaloq ustun D-30sm"
+            tavsif = f"Yumaloq ustun\nD-{d_val}"
             jami_umumiy += int(jami_narx)
-            table_data.append([str(i), tavsif, qop_val, h_val.replace("m","") if h_val else "-", "M", format_narx(metr_narx)+"/M" if metr_narx else "-", format_narx(int(jami_narx)) if jami_narx else "-"])
+            table_data.append([str(i), tavsif, qop_clean,
+                                h_val.replace("m","") if h_val else "-", "M",
+                                format_narx(metr_narx)+"/M" if metr_narx else "-",
+                                format_narx(int(jami_narx)) if jami_narx else "-"])
 
         # ===== KAPITEL / BAZA =====
         elif "kapitel" in nom_lower or ("baza" in nom_lower and "yumaloq" not in nom_lower):
             tavsif = format_model_nom(nom_raw, razmer_raw)
+            qop_clean = "qoplama" if qoplama_turi and "qoplama" in qoplama_turi.lower() else "qoplamasiz"
             jami_umumiy += int(jami_narx)
-            table_data.append([str(i), tavsif, qoplama_turi or "-", miqdor_num, "TA", "-", format_narx(int(jami_narx)) if jami_narx else "-"])
+            table_data.append([str(i), tavsif, qop_clean, miqdor_num, "TA",
+                                format_narx(birlik_narx) if birlik_narx else "-",
+                                format_narx(int(jami_narx)) if jami_narx else "-"])
 
         # ===== KALVAK =====
         elif "kalvak" in nom_lower or "kronshteyn" in nom_lower:
             tavsif = f"Kalvak\n{razmer_raw.split(',')[0] if razmer_raw else ''}"
             jami_umumiy += int(jami_narx)
-            table_data.append([str(i), tavsif, "-", miqdor_num, "TA", "-", format_narx(int(jami_narx)) if jami_narx else "-"])
+            table_data.append([str(i), tavsif, "-", miqdor_num, "TA",
+                                format_narx(birlik_narx) if birlik_narx else "-",
+                                format_narx(int(jami_narx)) if jami_narx else "-"])
 
         # ===== BARELYEF =====
         elif "barelyef" in nom_lower or "barelef" in nom_lower:
             tavsif = f"Barelyef\n{razmer_raw.split(',')[0] if razmer_raw else ''}"
             jami_umumiy += int(jami_narx)
-            table_data.append([str(i), tavsif, "-", miqdor_num, "TA", "-", format_narx(int(jami_narx)) if jami_narx else "-"])
+            table_data.append([str(i), tavsif, "-", miqdor_num, "TA",
+                                format_narx(birlik_narx) if birlik_narx else "-",
+                                format_narx(int(jami_narx)) if jami_narx else "-"])
 
-        # ===== ROM BEZAK =====
+        # ===== ROM BEZAK — har detal alohida narx bilan =====
         elif "rom" in nom_lower:
             import re as re2
             komplekt = "Katta" if "Katta" in nom_raw else "Kichik"
+            qop_clean = "qoplama" if qoplama_turi and "qoplama" in qoplama_turi.lower() else "qoplamasiz"
             model_m = re2.search(r'Model-(\d+)', nom_raw)
-            model_kod = f"Rom-{int(model_m.group(1)):02d}" if model_m else "Rom"
+            model_num = int(model_m.group(1)) if model_m else 1
+            model_kod = f"Rom-{model_num:02d}"
+
+            # Sheets dan narx olish funksiyasi
+            from sheets_narx import narx_ol
+            def rom_narx(detal_nom):
+                kalit = f"Rom_{model_num:02d}_{komplekt}_{detal_nom}"
+                n = narx_ol(kalit)
+                return n if n else 0
+
             detal_rows = []
             if razmer_raw:
                 for q in razmer_raw.split(" | "):
@@ -369,35 +392,43 @@ def create_pdf_bytes(mijoz_ism, savat_items):
                     try:
                         clean = detal_val.replace("m","").replace("dona","").strip()
                         if float(clean) == 0: continue
-                    except: pass
+                        miqdor_d = float(clean)
+                    except:
+                        miqdor_d = 0
+                        continue
                     is_metr = "m" in detal_val and "dona" not in detal_val
-                    detal_rows.append((detal_nom, detal_val, "M" if is_metr else "TA"))
+                    birlik = "M" if is_metr else "TA"
+                    # Sheets dan birlik narxi
+                    d_narx = rom_narx(detal_nom)
+                    d_jami = int(d_narx * miqdor_d) if d_narx else 0
+                    detal_rows.append((detal_nom, str(int(miqdor_d)), birlik, d_narx, d_jami))
+
             if detal_rows:
-                jami_umumiy += int(jami_narx)
-                for idx, (dn, dv, bt) in enumerate(detal_rows):
-                    is_first = idx == 0
-                    is_last = idx == len(detal_rows) - 1
-                    val_num = re2.sub(r'[^\d.]', '', dv)
+                umumiy_jami = sum(r[4] for r in detal_rows)
+                jami_umumiy += umumiy_jami
+                for idx, (dn, dv, bt, d_narx, d_jami) in enumerate(detal_rows):
                     table_data.append([
-                        str(i) if is_first else "",
+                        str(i) if idx == 0 else "",
                         f"{model_kod} {dn} ({komplekt})",
-                        "-",
-                        val_num,
+                        qop_clean,
+                        dv,
                         bt,
-                        "-",
-                        format_narx(int(jami_narx)) if is_last else ""
+                        format_narx(d_narx) if d_narx else "-",
+                        format_narx(d_jami) if d_jami else "-"
                     ])
             else:
                 jami_umumiy += int(jami_narx)
-                table_data.append([str(i), nom_raw, "-", "1", "TA", "-", format_narx(int(jami_narx)) if jami_narx else "-"])
+                table_data.append([str(i), nom_raw, qop_clean, "1", "TA", "-",
+                                   format_narx(int(jami_narx)) if jami_narx else "-"])
 
         # ===== STANDART: KARNIZ, BELBOG, RAMKA, PLYASTR =====
         else:
             tavsif = format_model_nom(nom_raw, razmer_raw)
-            qop_col = qoplama_turi if qoplama_turi else "-"
-            narx_col = format_narx(birlik_narx) if birlik_narx else "-"
+            qop_clean = "qoplama" if qoplama_turi and "qoplama" in qoplama_turi.lower() else "qoplamasiz"
             jami_umumiy += int(jami_narx)
-            table_data.append([str(i), tavsif, qop_col, miqdor_num, birlik_txt, format_narx(birlik_narx) if birlik_narx else "-", format_narx(int(jami_narx)) if jami_narx else "-"])
+            table_data.append([str(i), tavsif, qop_clean, miqdor_num, birlik_txt,
+                                format_narx(birlik_narx) if birlik_narx else "-",
+                                format_narx(int(jami_narx)) if jami_narx else "-"])
 
     table_data.append(["", "", "", "", "", "UMUMIY JAMI:", format_narx(jami_umumiy) if jami_umumiy else "Hisoblanadi"])
 
