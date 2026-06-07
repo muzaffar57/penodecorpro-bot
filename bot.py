@@ -1945,13 +1945,7 @@ def main():
             MessageHandler(filters.TEXT & ~filters.COMMAND, category_chosen),
         ],
     )
-    app.add_handler(conv_handler)
-    app.add_handler(CommandHandler("narx", send_price))
-    app.add_handler(CommandHandler("narx_yangilash", narx_yangilash_cmd))
-    app.add_handler(CommandHandler("send_all", send_all_cmd))
-    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp_data_received))
-
-    # PDF buyurtma conversation
+    # PDF buyurtma conversation — boshqa handlerlardan OLDIN qo'shilishi kerak
     pdf_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(buyurtma_tasdiqlash_cb, pattern="^buyurtma_tasdiqlash$")],
         states={
@@ -1962,6 +1956,12 @@ def main():
     )
     app.add_handler(pdf_conv)
     app.add_handler(CallbackQueryHandler(buyurtma_bekor_cb, pattern="^buyurtma_bekor$"))
+
+    app.add_handler(conv_handler)
+    app.add_handler(CommandHandler("narx", send_price))
+    app.add_handler(CommandHandler("narx_yangilash", narx_yangilash_cmd))
+    app.add_handler(CommandHandler("send_all", send_all_cmd))
+    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp_data_received))
     app.run_polling()
 
 
