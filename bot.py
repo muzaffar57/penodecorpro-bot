@@ -299,22 +299,44 @@ def create_pdf_bytes(mijoz_ism, savat_items):
             qoplama = item.get("qoplama", "")
             rom_tur = item.get("rom_tur", "")
 
-            tavsif = category
-            if model:
-                tavsif += "\n" + model
+            # Rom bezak uchun maxsus format
+            if "rom" in nom_raw.lower():
+                tavsif = nom_raw  # "Rom bezagi Model-09 (Katta komplekt)"
+                # razmer: "Nalichnik:30m | Karniz:20m | Padakolnik:18m | Korona:0 | Kalvak:8"
+                detallar = []
+                if razmer:
+                    for q in razmer.split(" | "):
+                        q = q.strip()
+                        if not q or "Qoplama" in q or "yaxl" in q:
+                            continue
+                        val = q.split(":")[-1].strip().replace("m","").replace("dona","").strip()
+                        try:
+                            if float(val) == 0:
+                                continue
+                        except:
+                            pass
+                        detallar.append(q)
+                olcham_tur = "\n".join([f"{n+1}. {d}" for n,d in enumerate(detallar)])
+                miqdor_col = "1 komplekt"
+                birlik_col = "-"
+                jami_col = format_narx(int(jami_narx)) if jami_narx else "Hisoblanadi"
+            else:
+                tavsif = category
+                if model:
+                    tavsif += "\n" + model
 
-            olcham_parts = []
-            if rom_tur:
-                olcham_parts.append(rom_tur)
-            if razmer:
-                olcham_parts.append(razmer)
-            if qoplama:
-                olcham_parts.append("Qoplama: " + qoplama)
-            olcham_tur = " | ".join(olcham_parts) if olcham_parts else "-"
+                olcham_parts = []
+                if rom_tur:
+                    olcham_parts.append(rom_tur)
+                if razmer:
+                    olcham_parts.append(razmer)
+                if qoplama:
+                    olcham_parts.append("Qoplama: " + qoplama)
+                olcham_tur = " | ".join(olcham_parts) if olcham_parts else "-"
 
-            miqdor_col = miqdor_raw
-            birlik_col = format_narx(birlik_narx) if birlik_narx else "-"
-            jami_col = format_narx(int(jami_narx)) if jami_narx else "Hisoblanadi"
+                miqdor_col = miqdor_raw
+                birlik_col = format_narx(birlik_narx) if birlik_narx else "-"
+                jami_col = format_narx(int(jami_narx)) if jami_narx else "Hisoblanadi"
 
         jami_umumiy += int(jami_narx)
         table_data.append([
@@ -1616,11 +1638,27 @@ async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYP
 
             # Rom bezak
             elif "rom" in nom_lower:
+                # razmer: "Nalichnik:30m | Karniz:20m | Padakolnik:18m | Korona:0 | Kalvak:8"
+                detallar = ""
+                if razmer:
+                    # Har bir detalni alohida qatorga
+                    qismlar = razmer.split(" | ")
+                    satir_num = 1
+                    for q in qismlar:
+                        q = q.strip()
+                        if q and not q.startswith("Qoplama"):
+                            # Nol bo'lgan detallarni o'tkazib yuborish
+                            val = q.split(":")[-1].strip().replace("m","").replace("dona","").strip()
+                            try:
+                                if float(val) == 0:
+                                    continue
+                            except:
+                                pass
+                            detallar += f"   {satir_num}. {q}\n"
+                            satir_num += 1
                 return (
                     f"{i}. 🪟 <b>{nom}</b>\n"
-                    f"   📏 Tur: {razmer}\n"
-                    f"   🖌 Qoplama: {qoplama_holati}\n"
-                    f"   📦 {miqdor} × {fmt(birlik)}\n"
+                    f"{detallar}"
                     f"   💰 Jami: <b>{fmt(jami)}</b>\n"
                 )
 
