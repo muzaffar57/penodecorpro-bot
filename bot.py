@@ -241,7 +241,7 @@ def create_pdf_bytes(mijoz_ism, savat_items):
     story.append(Spacer(1, 0.3*cm))
 
     # ===== JADVAL =====
-    table_data = [["#", "Mahsulot tavsifi", "Qoplama", "Miqdor", "Birlik narx", "Jami"]]
+    table_data = [["#", "Mahsulot tavsifi", "Qoplama", "Miqdor", "O'lchov", "Birlik narx", "Jami"]]
     jami_umumiy = 0
 
     def format_model_nom(nom_raw, razmer=""):
@@ -331,32 +331,32 @@ def create_pdf_bytes(mijoz_ism, savat_items):
                 metr_narx = 0
             tavsif = f"Yumaloq ustun\nD: {d_val}"
             jami_umumiy += int(jami_narx)
-            table_data.append([str(i), tavsif, qop_val, h_val or "-", format_narx(metr_narx)+"/M" if metr_narx else "-", format_narx(int(jami_narx)) if jami_narx else "-"])
+            table_data.append([str(i), tavsif, qop_val, h_val.replace("m","") if h_val else "-", "M", format_narx(metr_narx)+"/M" if metr_narx else "-", format_narx(int(jami_narx)) if jami_narx else "-"])
 
         # ===== KAPITEL / BAZA =====
         elif "kapitel" in nom_lower or ("baza" in nom_lower and "yumaloq" not in nom_lower):
             tavsif = format_model_nom(nom_raw, razmer_raw)
             jami_umumiy += int(jami_narx)
-            table_data.append([str(i), tavsif, qoplama_turi or "-", miqdor_num, "TA", format_narx(int(jami_narx)) if jami_narx else "-"])
+            table_data.append([str(i), tavsif, qoplama_turi or "-", miqdor_num, "TA", "-", format_narx(int(jami_narx)) if jami_narx else "-"])
 
         # ===== KALVAK =====
         elif "kalvak" in nom_lower or "kronshteyn" in nom_lower:
             tavsif = f"Kalvak\n{razmer_raw.split(',')[0] if razmer_raw else ''}"
             jami_umumiy += int(jami_narx)
-            table_data.append([str(i), tavsif, "-", miqdor_num, "TA", format_narx(int(jami_narx)) if jami_narx else "-"])
+            table_data.append([str(i), tavsif, "-", miqdor_num, "TA", "-", format_narx(int(jami_narx)) if jami_narx else "-"])
 
         # ===== BARELYEF =====
         elif "barelyef" in nom_lower or "barelef" in nom_lower:
             tavsif = f"Barelyef\n{razmer_raw.split(',')[0] if razmer_raw else ''}"
             jami_umumiy += int(jami_narx)
-            table_data.append([str(i), tavsif, "-", miqdor_num, "TA", format_narx(int(jami_narx)) if jami_narx else "-"])
+            table_data.append([str(i), tavsif, "-", miqdor_num, "TA", "-", format_narx(int(jami_narx)) if jami_narx else "-"])
 
         # ===== ROM BEZAK =====
         elif "rom" in nom_lower:
             import re as re2
             komplekt = "Katta" if "Katta" in nom_raw else "Kichik"
             model_m = re2.search(r'Model-(\d+)', nom_raw)
-            model_kod = f"M-{int(model_m.group(1)):02d}" if model_m else ""
+            model_kod = f"Rom-{int(model_m.group(1)):02d}" if model_m else "Rom"
             detal_rows = []
             if razmer_raw:
                 for q in razmer_raw.split(" | "):
@@ -384,11 +384,12 @@ def create_pdf_bytes(mijoz_ism, savat_items):
                         "-",
                         val_num,
                         bt,
+                        "-",
                         format_narx(int(jami_narx)) if is_last else ""
                     ])
             else:
                 jami_umumiy += int(jami_narx)
-                table_data.append([str(i), nom_raw, "-", "1", "TA", format_narx(int(jami_narx)) if jami_narx else "-"])
+                table_data.append([str(i), nom_raw, "-", "1", "TA", "-", format_narx(int(jami_narx)) if jami_narx else "-"])
 
         # ===== STANDART: KARNIZ, BELBOG, RAMKA, PLYASTR =====
         else:
@@ -396,11 +397,11 @@ def create_pdf_bytes(mijoz_ism, savat_items):
             qop_col = qoplama_turi if qoplama_turi else "-"
             narx_col = format_narx(birlik_narx) if birlik_narx else "-"
             jami_umumiy += int(jami_narx)
-            table_data.append([str(i), tavsif, qop_col, miqdor_num, birlik_txt, format_narx(int(jami_narx)) if jami_narx else "-"])
+            table_data.append([str(i), tavsif, qop_col, miqdor_num, birlik_txt, format_narx(birlik_narx) if birlik_narx else "-", format_narx(int(jami_narx)) if jami_narx else "-"])
 
-    table_data.append(["", "", "", "", "UMUMIY JAMI:", format_narx(jami_umumiy) if jami_umumiy else "Hisoblanadi"])
+    table_data.append(["", "", "", "", "", "UMUMIY JAMI:", format_narx(jami_umumiy) if jami_umumiy else "Hisoblanadi"])
 
-    col_widths = [0.7*cm, 4.8*cm, 4.2*cm, 2.3*cm, 2.8*cm, 3.2*cm]
+    col_widths = [0.6*cm, 4.0*cm, 2.2*cm, 1.4*cm, 1.4*cm, 2.4*cm, 2.8*cm]
     prod_table = Table(table_data, colWidths=col_widths, repeatRows=1)
     prod_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#1A252F")),
@@ -422,7 +423,7 @@ def create_pdf_bytes(mijoz_ism, savat_items):
         ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor("#EBF5FB")),
         ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
         ('FONTSIZE', (0,-1), (-1,-1), 9),
-        ('TEXTCOLOR', (4,-1), (-1,-1), colors.HexColor("#E74C3C")),
+        ('TEXTCOLOR', (5,-1), (-1,-1), colors.HexColor("#E74C3C")),
         ('LINEABOVE', (0,-1), (-1,-1), 2, colors.HexColor("#1A252F")),
         ('ALIGN', (2,1), (-1,-1), 'CENTER'),
         ('ALIGN', (0,0), (0,-1), 'CENTER'),
