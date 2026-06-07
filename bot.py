@@ -1490,6 +1490,52 @@ async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYP
             )
             return
 
+        # ===== PDF KO'RISH (buyurtmasiz) =====
+        if amal == "pdf_sorovi":
+            items = data.get("savat", [])
+            jami = data.get("jami_summa", 0)
+            if not items:
+                await update.message.reply_text("❌ Savat bo'sh!")
+                return
+
+            # PDF yaratish va yuborish
+            try:
+                pdf_bytes = create_pdf_bytes(
+                    user.first_name + " (Oldindan ko'rish)",
+                    items
+                )
+                # Savatni vaqtincha saqlash
+                savat_saqlash(user.id, items)
+
+                keyboard = InlineKeyboardMarkup([[
+                    InlineKeyboardButton(
+                        "✅ Ha, shu hisob bo'yicha buyurtma beraman!",
+                        callback_data="buyurtma_tasdiqlash"
+                    )
+                ],[
+                    InlineKeyboardButton(
+                        "❌ Yo'q, qaytaman",
+                        callback_data="buyurtma_bekor"
+                    )
+                ]])
+
+                await context.bot.send_document(
+                    chat_id=user.id,
+                    document=io.BytesIO(pdf_bytes),
+                    filename="PenoDecorPro_hisob.pdf",
+                    caption=(
+                        f"📄 <b>Sizning hisobingiz</b>\n"
+                        f"💰 Jami: <b>{int(jami):,} so'm</b>\n\n"
+                        f"Shu hisob bo'yicha buyurtma bermoqchimisiz?"
+                    ),
+                    parse_mode="HTML",
+                    reply_markup=keyboard
+                )
+            except Exception as e:
+                logger.error(f"PDF xato: {e}")
+                await update.message.reply_text("❌ PDF yaratishda xato. Qayta urinib ko'ring.")
+            return
+
         savat_items = data.get("savat", [])
         jami_summa = data.get("jami_summa", 0)
         qoplama_holati = data.get("qoplama_holati", "Qoplamali")
@@ -1661,7 +1707,107 @@ async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text("❌ Xato yuz berdi. Qayta urinib ko'ring.")
 
 
-async def send_all_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ===== PDF BUYURTMA CALLBACK =====
+PDF_ISM, PDF_TEL = range(200, 202)
+
+async def buyurtma_tasdiqlash_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Foydalanuvchi 'Ha, buyurtma beraman' ni bosdi."""
+    query = update.callback_query
+    await query.answer()
+    await query.message.reply_text(
+        "👤 Ismingizni kiriting (To'liq ism):"
+    )
+    return PDF_ISM
+
+async def buyurtma_bekor_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Foydalanuvchi 'Yo'q, qaytaman' ni bosdi."""
+    query = update.callback_query
+    await query.answer()
+    await query.message.reply_text(
+        "❌ Buyurtma bekor qilindi. WebApp orqali qaytadan buyurtma bera olasiz."
+    )
+    return ConversationHandler.END
+
+async def pdf_ism_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Ism qabul qilindi."""
+    context.user_data['pdf_ism'] = update.message.text.strip()
+    await update.message.reply_text(
+        "📞 Telefon raqamingizni kiriting:\n(Masalan: +998 90 123 45 67)"
+    )
+    return PDF_TEL
+
+async def pdf_tel_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Tel qabul qilindi — PDF yuborish."""
+    uid = update.effective_user.id
+    ism = context.user_data.get('pdf_ism', update.effective_user.first_name)
+    tel = update.message.text.strip()
+
+    items = savat_yuklash(uid)
+    if not items:
+        await update.message.reply_text("❌ Savat topilmadi. WebApp dan qaytadan urinib ko'ring.")
+        return ConversationHandler.END
+
+    jami = sum(i.get('jami', 0) for i in items)
+
+    def fmt(n):
+        return f"{int(n):,}".replace(",", " ") + " so'm"
+
+    try:
+        # Mijozga PDF
+        pdf_bytes = create_pdf_bytes(ism + " | " + tel, items)
+        await context.bot.send_document(
+            chat_id=uid,
+            document=io.BytesIO(pdf_bytes),
+            filename="PenoDecorPro_buyurtma.pdf",
+            caption=(
+                f"✅ <b>Buyurtmangiz qabul qilindi!</b>\n\n"
+                f"👤 Ism: {ism}\n"
+                f"📞 Tel: {tel}\n"
+                f"💰 Jami: <b>{fmt(jami)}</b>\n\n"
+                f"Tez orada menejer siz bilan bog'lanadi!"
+            ),
+            parse_mode="HTML"
+        )
+
+        # Adminga xabar + PDF
+        from datetime import timezone, timedelta
+        uzb_tz = timezone(timedelta(hours=5))
+        vaqt = datetime.now(uzb_tz).strftime("%d.%m.%Y %H:%M")
+        user = update.effective_user
+
+        admin_msg = (
+            f"🛒 <b>YANGI BUYURTMA (WebApp PDF)</b>\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"👤 Ism: <b>{ism}</b>\n"
+            f"📞 Tel: <b>{tel}</b>\n"
+            f"🆔 Telegram: <a href='tg://user?id={uid}'>{user.first_name}</a>\n"
+            f"🕐 Vaqt: {vaqt}\n"
+            f"💰 Jami: <b>{fmt(jami)}</b>\n"
+            f"━━━━━━━━━━━━━━━━━━"
+        )
+
+        pdf_bytes2 = create_pdf_bytes(ism + " | " + tel, items)
+        keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton(f"📞 {ism} bilan bog'lanish", url=f"tg://user?id={uid}")
+        ]])
+
+        await context.bot.send_document(
+            chat_id=ADMIN_ID,
+            document=io.BytesIO(pdf_bytes2),
+            filename="PenoDecorPro_buyurtma.pdf",
+            caption=admin_msg,
+            parse_mode="HTML",
+            reply_markup=keyboard
+        )
+
+        # Savatni tozalash
+        savat_tozalash(uid)
+
+    except Exception as e:
+        logger.error(f"PDF buyurtma xato: {e}")
+        await update.message.reply_text("❌ Xato yuz berdi. Qayta urinib ko'ring.")
+
+    return ConversationHandler.END
     """Admin rassilka boshlaydi."""
     if update.effective_user.id != ADMIN_ID:
         return
@@ -1791,6 +1937,18 @@ def main():
     app.add_handler(CommandHandler("narx_yangilash", narx_yangilash_cmd))
     app.add_handler(CommandHandler("send_all", send_all_cmd))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp_data_received))
+
+    # PDF buyurtma conversation
+    pdf_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(buyurtma_tasdiqlash_cb, pattern="^buyurtma_tasdiqlash$")],
+        states={
+            PDF_ISM: [MessageHandler(filters.TEXT & ~filters.COMMAND, pdf_ism_received)],
+            PDF_TEL: [MessageHandler(filters.TEXT & ~filters.COMMAND, pdf_tel_received)],
+        },
+        fallbacks=[CallbackQueryHandler(buyurtma_bekor_cb, pattern="^buyurtma_bekor$")],
+    )
+    app.add_handler(pdf_conv)
+    app.add_handler(CallbackQueryHandler(buyurtma_bekor_cb, pattern="^buyurtma_bekor$"))
     app.run_polling()
 
 
