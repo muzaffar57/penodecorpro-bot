@@ -434,7 +434,7 @@ def create_pdf_bytes(mijoz_ism, savat_items):
     chegirma_summa = int(jami_umumiy * 0.9)
     table_data.append(["", "", "", "", "", "10% CHEGIRMA BILAN:", format_narx(chegirma_summa) if chegirma_summa else "-"])
 
-    col_widths = [0.6*cm, 4.0*cm, 2.2*cm, 1.4*cm, 1.4*cm, 2.4*cm, 2.8*cm]
+    col_widths = [0.6*cm, 4.0*cm, 2.0*cm, 1.2*cm, 1.2*cm, 2.6*cm, 3.2*cm]
     prod_table = Table(table_data, colWidths=col_widths, repeatRows=1)
     prod_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#1A252F")),
