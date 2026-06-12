@@ -431,6 +431,8 @@ def create_pdf_bytes(mijoz_ism, savat_items):
                                 format_narx(int(jami_narx)) if jami_narx else "-"])
 
     table_data.append(["", "", "", "", "", "UMUMIY JAMI:", format_narx(jami_umumiy) if jami_umumiy else "Hisoblanadi"])
+    chegirma_summa = int(jami_umumiy * 0.9)
+    table_data.append(["", "", "", "", "", "10% CHEGIRMA BILAN:", format_narx(chegirma_summa) if chegirma_summa else "-"])
 
     col_widths = [0.6*cm, 4.0*cm, 2.2*cm, 1.4*cm, 1.4*cm, 2.4*cm, 2.8*cm]
     prod_table = Table(table_data, colWidths=col_widths, repeatRows=1)
@@ -454,8 +456,12 @@ def create_pdf_bytes(mijoz_ism, savat_items):
         ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor("#EBF5FB")),
         ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
         ('FONTSIZE', (0,-1), (-1,-1), 9),
-        ('TEXTCOLOR', (5,-1), (-1,-1), colors.HexColor("#E74C3C")),
-        ('LINEABOVE', (0,-1), (-1,-1), 2, colors.HexColor("#1A252F")),
+        ('TEXTCOLOR', (5,-2), (-2,-2), colors.HexColor("#E74C3C")),
+        ('LINEABOVE', (0,-2), (-1,-2), 2, colors.HexColor("#1A252F")),
+        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor("#E8F5E9")),
+        ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,-1), (-1,-1), 9),
+        ('TEXTCOLOR', (5,-1), (-1,-1), colors.HexColor("#2E7D32")),
         ('ALIGN', (2,1), (-1,-1), 'CENTER'),
         ('ALIGN', (0,0), (0,-1), 'CENTER'),
     ]))
