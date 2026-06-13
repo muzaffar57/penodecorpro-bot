@@ -1774,10 +1774,10 @@ async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYP
         # ===== FOYDALANUVCHIGA XABAR =====
         user_link = f'<a href="tg://user?id={user.id}">{user.first_name}</a>'
 
-        # Foydalanuvchiga tasdiqlash xabari va PDF
+        # Foydalanuvchiga tasdiqlash xabari
         try:
             chegirma_txt = f"\n💚 10% chegirma bilan: <b>{int(chegirma_summa):,} so'm</b>" if chegirma_summa else ""
-            sent = await update.message.reply_text(
+            await update.message.reply_text(
                 f"✅ <b>Buyurtmangiz qabul qilindi!</b>\n"
                 f"👤 {mijoz_ism}\n"
                 f"📞 {mijoz_tel}\n"
@@ -1786,16 +1786,6 @@ async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYP
                 f"📞 Tez orada menejer siz bilan bog'lanadi!",
                 parse_mode="HTML"
             )
-            try:
-                pdf_bytes = create_pdf_bytes(mijoz_ism, savat_items)
-                await context.bot.send_document(
-                    chat_id=sent.chat_id,
-                    document=io.BytesIO(pdf_bytes),
-                    filename="PenoDecorPro_buyurtma.pdf",
-                    caption="📄 Buyurtma yukxati"
-                )
-            except Exception as pdf_e:
-                logger.error(f"PDF yuborish xato: {pdf_e}")
         except Exception as e:
             logger.error(f"Buyurtma PDF xato: {e}")
             mijoz_msg = (
@@ -1849,6 +1839,18 @@ async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYP
             parse_mode="HTML",
             reply_markup=keyboard
         )
+
+        # PDF ni adminga yuborish
+        try:
+            pdf_bytes = create_pdf_bytes(mijoz_ism, savat_items)
+            await context.bot.send_document(
+                chat_id=ADMIN_ID,
+                document=io.BytesIO(pdf_bytes),
+                filename=f"PenoDecorPro_{mijoz_ism}.pdf",
+                caption=f"📄 {mijoz_ism} — {mijoz_tel} buyurtmasi"
+            )
+        except Exception as pdf_e:
+            logger.error(f"Admin PDF xato: {pdf_e}")
 
         logger.info(f"WebApp buyurtma: {user.id} — {fmt(jami_summa)}")
         # Buyurtma muvaffaqiyatli — savatni bazadan tozalash
