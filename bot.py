@@ -1774,12 +1774,9 @@ async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYP
         # ===== FOYDALANUVCHIGA XABAR =====
         user_link = f'<a href="tg://user?id={user.id}">{user.first_name}</a>'
 
-        # PDF yaratish
+        # Foydalanuvchiga tasdiqlash xabari va PDF
         try:
-            pdf_bytes = create_pdf_bytes(mijoz_ism, savat_items)
             chegirma_txt = f"\n💚 10% chegirma bilan: <b>{int(chegirma_summa):,} so'm</b>" if chegirma_summa else ""
-            
-            # Avval tasdiqlash xabari
             sent = await update.message.reply_text(
                 f"✅ <b>Buyurtmangiz qabul qilindi!</b>\n"
                 f"👤 {mijoz_ism}\n"
@@ -1789,13 +1786,16 @@ async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYP
                 f"📞 Tez orada menejer siz bilan bog'lanadi!",
                 parse_mode="HTML"
             )
-            # Keyin PDF
-            await context.bot.send_document(
-                chat_id=sent.chat.id,
-                document=io.BytesIO(pdf_bytes),
-                filename="PenoDecorPro_buyurtma.pdf",
-                caption="📄 Buyurtma yukxati"
-            )
+            try:
+                pdf_bytes = create_pdf_bytes(mijoz_ism, savat_items)
+                await context.bot.send_document(
+                    chat_id=sent.chat_id,
+                    document=io.BytesIO(pdf_bytes),
+                    filename="PenoDecorPro_buyurtma.pdf",
+                    caption="📄 Buyurtma yukxati"
+                )
+            except Exception as pdf_e:
+                logger.error(f"PDF yuborish xato: {pdf_e}")
         except Exception as e:
             logger.error(f"Buyurtma PDF xato: {e}")
             mijoz_msg = (
