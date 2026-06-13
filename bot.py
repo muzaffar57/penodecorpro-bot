@@ -2066,6 +2066,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("📊 Statistika", callback_data="admin_stat")],
         [InlineKeyboardButton("📢 Rassilka yuborish", callback_data="admin_rassilka")],
         [InlineKeyboardButton("👥 Foydalanuvchilar soni", callback_data="admin_users")],
+        [InlineKeyboardButton("🔄 Katalog yangilandi (xabar yuborish)", callback_data="admin_yangilandi")],
     ])
     
     await update.message.reply_text(
@@ -2108,7 +2109,33 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="HTML"
         )
     
-    elif query.data == "admin_rassilka":
+    elif query.data == "admin_yangilandi":
+        userlar = barcha_foydalanuvchilar()
+        muvaffaqiyat = 0
+        xato = 0
+        for user_id in userlar:
+            try:
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=(
+                        "🔄 <b>Katalog yangilandi!</b>\n\n"
+                        "Yangi o'zgarishlarni ko'rish uchun:\n"
+                        "1️⃣ Botni yoping\n"
+                        "2️⃣ Telegram → Sozlamalar → Ma'lumotlar → Keshni tozalash\n"
+                        "3️⃣ Botni qayta oching\n\n"
+                        "Yoki shunchaki <b>botni qayta oching</b> — ko'p hollarda yetarli! 😊"
+                    ),
+                    parse_mode="HTML"
+                )
+                muvaffaqiyat += 1
+            except Exception as e:
+                xato += 1
+        
+        await query.message.reply_text(
+            f"✅ Xabar yuborildi!\n\n"
+            f"✓ Muvaffaqiyatli: {muvaffaqiyat} ta\n"
+            f"✗ Bloklaganlar: {xato} ta"
+        )
         soni = foydalanuvchilar_soni()
         await query.message.reply_text(
             f"📢 <b>Rassilka rejimi</b>\n\n"
