@@ -1648,7 +1648,10 @@ async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYP
 
         savat_items = data.get("savat", [])
         jami_summa = data.get("jami_summa", 0)
+        chegirma_summa = data.get("chegirma_summa", 0)
         qoplama_holati = data.get("qoplama_holati", "Qoplamali")
+        mijoz_ism = data.get("ism", user.first_name)
+        mijoz_tel = data.get("tel", "")
 
         if not savat_items:
             await update.message.reply_text("❌ Savat bo'sh!")
@@ -1770,21 +1773,41 @@ async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYP
 
         # ===== FOYDALANUVCHIGA XABAR =====
         user_link = f'<a href="tg://user?id={user.id}">{user.first_name}</a>'
-        mijoz_msg = (
-            f"✅ <b>Buyurtmangiz qabul qilindi!</b>\n"
-            f"🕐 {vaqt}\n\n"
-            f"━━━━━━━━━━━━━━━━━━\n"
-        )
-        for i, item in enumerate(savat_items, 1):
-            mijoz_msg += format_item(i, item)
-            mijoz_msg += "─────────────────\n"
 
-        mijoz_msg += (
-            f"\n💵 <b>Umumiy hisob: {fmt(jami_summa)}</b>\n\n"
-            f"📞 Tez orada menejer siz bilan bog'lanadi!\n"
-            f"Savollar uchun: @penodecorprouz"
-        )
-        await update.message.reply_text(mijoz_msg, parse_mode="HTML")
+        # PDF yaratish
+        try:
+            pdf_bytes = create_pdf_bytes(mijoz_ism, savat_items)
+            chegirma_txt = f"\n💚 10% chegirma bilan: <b>{int(chegirma_summa):,} so'm</b>" if chegirma_summa else ""
+            await context.bot.send_document(
+                chat_id=user.id,
+                document=io.BytesIO(pdf_bytes),
+                filename="PenoDecorPro_buyurtma.pdf",
+                caption=(
+                    f"✅ <b>Buyurtmangiz qabul qilindi!</b>\n"
+                    f"👤 {mijoz_ism}\n"
+                    f"📞 {mijoz_tel}\n"
+                    f"💵 Jami: <b>{int(jami_summa):,} so'm</b>"
+                    f"{chegirma_txt}\n\n"
+                    f"📞 Tez orada menejer siz bilan bog'lanadi!"
+                ),
+                parse_mode="HTML"
+            )
+        except Exception as e:
+            logger.error(f"Buyurtma PDF xato: {e}")
+            mijoz_msg = (
+                f"✅ <b>Buyurtmangiz qabul qilindi!</b>\n"
+                f"🕐 {vaqt}\n\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+            )
+            for i, item in enumerate(savat_items, 1):
+                mijoz_msg += format_item(i, item)
+                mijoz_msg += "─────────────────\n"
+            mijoz_msg += (
+                f"\n💵 <b>Umumiy hisob: {int(jami_summa):,} so'm</b>\n\n"
+                f"📞 Tez orada menejer siz bilan bog'lanadi!\n"
+                f"Savollar uchun: @penodecorprouz"
+            )
+            await update.message.reply_text(mijoz_msg, parse_mode="HTML")
 
         # ===== ADMINGA XABAR =====
         user_mention = f'<a href="tg://user?id={user.id}">{user.first_name}</a>'
@@ -1794,6 +1817,8 @@ async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYP
             f"🛒 <b>YANGI BUYURTMA (PenoDecorPro)</b>\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"👤 Buyurtmachi: {user_mention}{username_str}\n"
+            f"📝 Ism: <b>{mijoz_ism}</b>\n"
+            f"📞 Tel: <b>{mijoz_tel}</b>\n"
             f"🆔 ID: <code>{user.id}</code>\n"
             f"🕐 Vaqt: {vaqt}\n"
             f"━━━━━━━━━━━━━━━━━━\n\n"
