@@ -1885,7 +1885,10 @@ async def buyurtma_tasdiqlash_cb(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     await query.answer()
     await query.message.reply_text(
-        "👤 Ismingizni kiriting (To'liq ism):"
+        "📝 Ism va telefon raqamingizni kiriting:\n\n"
+        "Namuna:\n"
+        "Abdullayev Jasur\n"
+        "+998 90 123 45 67"
     )
     return PDF_ISM
 
@@ -1899,18 +1902,24 @@ async def buyurtma_bekor_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 async def pdf_ism_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Ism qabul qilindi."""
-    context.user_data['pdf_ism'] = update.message.text.strip()
-    await update.message.reply_text(
-        "📞 Telefon raqamingizni kiriting:\n(Masalan: +998 90 123 45 67)"
-    )
-    return PDF_TEL
+    """Ism va tel birga qabul qilindi."""
+    matn = update.message.text.strip()
+    qatorlar = [q.strip() for q in matn.split('\n') if q.strip()]
+    if len(qatorlar) >= 2:
+        context.user_data['pdf_ism'] = qatorlar[0]
+        context.user_data['pdf_tel'] = qatorlar[1]
+    else:
+        context.user_data['pdf_ism'] = matn
+        context.user_data['pdf_tel'] = ""
+    
+    # To'g'ridan-to'g'ri PDF yuborish
+    return await pdf_tel_received(update, context)
 
 async def pdf_tel_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Tel qabul qilindi — PDF yuborish."""
+    """PDF yuborish."""
     uid = update.effective_user.id
     ism = context.user_data.get('pdf_ism', update.effective_user.first_name)
-    tel = update.message.text.strip()
+    tel = context.user_data.get('pdf_tel', update.message.text.strip())
 
     items = savat_yuklash(uid)
     if not items:
