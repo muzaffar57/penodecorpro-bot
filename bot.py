@@ -2051,6 +2051,74 @@ async def rassilka_yuborish(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return CHOOSING
 
 
+async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin panel."""
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("❌ Sizda admin huquqi yo'q!")
+        return
+    
+    from datetime import timezone, timedelta
+    uzb_tz = timezone(timedelta(hours=5))
+    vaqt = datetime.now(uzb_tz).strftime("%d.%m.%Y %H:%M")
+    soni = foydalanuvchilar_soni()
+    
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📊 Statistika", callback_data="admin_stat")],
+        [InlineKeyboardButton("📢 Rassilka yuborish", callback_data="admin_rassilka")],
+        [InlineKeyboardButton("👥 Foydalanuvchilar soni", callback_data="admin_users")],
+    ])
+    
+    await update.message.reply_text(
+        f"🔐 <b>Admin Panel</b>\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"🕐 Vaqt: {vaqt}\n"
+        f"👥 Foydalanuvchilar: <b>{soni} ta</b>\n"
+        f"━━━━━━━━━━━━━━━━━━\n\n"
+        f"Quyidagi amallardan birini tanlang:",
+        parse_mode="HTML",
+        reply_markup=keyboard
+    )
+
+
+async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin panel tugmalari."""
+    query = update.callback_query
+    await query.answer()
+    
+    if update.effective_user.id != ADMIN_ID:
+        return
+    
+    if query.data == "admin_stat":
+        soni = foydalanuvchilar_soni()
+        from datetime import timezone, timedelta
+        uzb_tz = timezone(timedelta(hours=5))
+        vaqt = datetime.now(uzb_tz).strftime("%d.%m.%Y %H:%M")
+        await query.message.reply_text(
+            f"📊 <b>Statistika</b>\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"👥 Jami foydalanuvchilar: <b>{soni} ta</b>\n"
+            f"🕐 Yangilangan: {vaqt}",
+            parse_mode="HTML"
+        )
+    
+    elif query.data == "admin_users":
+        soni = foydalanuvchilar_soni()
+        await query.message.reply_text(
+            f"👥 Bazada jami <b>{soni} ta</b> foydalanuvchi bor.",
+            parse_mode="HTML"
+        )
+    
+    elif query.data == "admin_rassilka":
+        soni = foydalanuvchilar_soni()
+        await query.message.reply_text(
+            f"📢 <b>Rassilka rejimi</b>\n\n"
+            f"Hozir bazada {soni} ta foydalanuvchi bor.\n\n"
+            f"Yubormoqchi bo'lgan xabaringizni kiriting:\n"
+            f"(Matn, rasm yoki video bo'lishi mumkin)"
+        )
+        context.user_data['rassilka_rejim'] = True
+
+
 async def narx_yangilash_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
@@ -2125,6 +2193,8 @@ def main():
 
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler("narx", send_price))
+    app.add_handler(CommandHandler("admin", admin_panel))
+    app.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
     app.add_handler(CommandHandler("narx_yangilash", narx_yangilash_cmd))
     app.add_handler(CommandHandler("send_all", send_all_cmd))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp_data_received))
