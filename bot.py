@@ -1778,18 +1778,23 @@ async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYP
         try:
             pdf_bytes = create_pdf_bytes(mijoz_ism, savat_items)
             chegirma_txt = f"\n💚 10% chegirma bilan: <b>{int(chegirma_summa):,} so'm</b>" if chegirma_summa else ""
-            await update.message.reply_document(
+            
+            # Avval tasdiqlash xabari
+            sent = await update.message.reply_text(
+                f"✅ <b>Buyurtmangiz qabul qilindi!</b>\n"
+                f"👤 {mijoz_ism}\n"
+                f"📞 {mijoz_tel}\n"
+                f"💵 Jami: <b>{int(jami_summa):,} so'm</b>"
+                f"{chegirma_txt}\n\n"
+                f"📞 Tez orada menejer siz bilan bog'lanadi!",
+                parse_mode="HTML"
+            )
+            # Keyin PDF
+            await context.bot.send_document(
+                chat_id=sent.chat.id,
                 document=io.BytesIO(pdf_bytes),
                 filename="PenoDecorPro_buyurtma.pdf",
-                caption=(
-                    f"✅ <b>Buyurtmangiz qabul qilindi!</b>\n"
-                    f"👤 {mijoz_ism}\n"
-                    f"📞 {mijoz_tel}\n"
-                    f"💵 Jami: <b>{int(jami_summa):,} so'm</b>"
-                    f"{chegirma_txt}\n\n"
-                    f"📞 Tez orada menejer siz bilan bog'lanadi!"
-                ),
-                parse_mode="HTML"
+                caption="📄 Buyurtma yukxati"
             )
         except Exception as e:
             logger.error(f"Buyurtma PDF xato: {e}")
