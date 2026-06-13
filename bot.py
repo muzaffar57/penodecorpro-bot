@@ -1778,8 +1778,7 @@ async def webapp_data_received(update: Update, context: ContextTypes.DEFAULT_TYP
         try:
             pdf_bytes = create_pdf_bytes(mijoz_ism, savat_items)
             chegirma_txt = f"\n💚 10% chegirma bilan: <b>{int(chegirma_summa):,} so'm</b>" if chegirma_summa else ""
-            await context.bot.send_document(
-                chat_id=user.id,
+            await update.message.reply_document(
                 document=io.BytesIO(pdf_bytes),
                 filename="PenoDecorPro_buyurtma.pdf",
                 caption=(
